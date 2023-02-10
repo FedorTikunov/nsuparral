@@ -24,6 +24,6 @@ int main() {
 	FuncArray(array, len);
 	clock_t difference = clock() - before;
 	int msec = difference * 1000 / CLOCKS_PER_SEC;
-	printf("Time taken: %d", msec);
+	printf("Time taken: %d", msec/1000);
 	return 0;
 }
