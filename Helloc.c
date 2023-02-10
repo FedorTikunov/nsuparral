@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #define N 100000000
 
 void FuncArray(double** my_array, int len) {
@@ -17,8 +18,12 @@ void FuncArray(double** my_array, int len) {
 
 
 int main() {
+	clock_t before = clock();
 	double** array = (double**)malloc(sizeof(double*));
 	long long len = N;
 	FuncArray(array, len);
+	clock_t difference = clock() - before;
+	int msec = difference * 1000 / CLOCKS_PER_SEC;
+	printf("Time taken: %d", msec);
 	return 0;
 }
