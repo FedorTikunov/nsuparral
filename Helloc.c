@@ -11,7 +11,7 @@ void funcArray(double* arr, size_t len) {
 	double step = 3.141592653589783 * 2 / MAX_SIZE;
 
 	#pragma acc data copyin(step)
-	#pragma acc parallel loop vector vector_length(128) gang, present_or_copyin(arr)
+	#pragma acc parallel loop vector vector_length(128) gang
 	for (size_t i = 0; i < len; i++)
 	{
 		arr[i] = sin(step * i);
@@ -42,7 +42,8 @@ int main() {
 	funcArray(arr, MAX_SIZE);
 	printf("summa = %0.23f\n", sumArray(arr, MAX_SIZE));
 
-	sec += (double)(clock() - before)/ CLOCKS_PER_SEC;
+	clock_t after = clock();
+	sec += (double)(after - before)/ CLOCKS_PER_SEC;
 	printf("Time taken: %.5f", sec);
 
 	free(arr);
