@@ -30,7 +30,7 @@ int main() {
 #pragma acc data create(array[:N])
 	{
 		FuncArray(array, len);
-		printf("summa = %.10f"SumArray(array, len));
+		printf("summa = %.10f", SumArray(array, len));
 	}
 	clock_t difference = clock() - before;
 	double msec = difference * 1000.0 / CLOCKS_PER_SEC;
