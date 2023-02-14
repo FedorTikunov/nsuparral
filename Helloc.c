@@ -27,7 +27,7 @@ int main() {
 	clock_t before = clock();
 	double** array = (double**)malloc(sizeof(double*));
 	long long len = N;
-#pragma acc data create(myArray[:N])
+#pragma acc data create(array[:N])
 	{
 		FuncArray(array, len);
 		SumArray(array, len);
