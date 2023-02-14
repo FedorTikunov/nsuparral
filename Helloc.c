@@ -14,7 +14,7 @@ void FuncArray(double** my_array, int len) {
 		*my_array[i] = sin(i * step);
 }
 
-double SumArray(double** my_array, int len) {
+double SumArray(double* my_array, int len) {
 	double sum = 0;
 //#pragma acc data copy(sum)
 #pragma acc parallel loop reduction(+:sum)
@@ -25,7 +25,7 @@ double SumArray(double** my_array, int len) {
 
 int main() {
 	clock_t before = clock();
-	double** array = (double**)malloc(sizeof(double*));
+	double* array = (double*)malloc(sizeof(double)*N);
 	long long len = N;
 #pragma acc data create(array[:N]) copyin(len)
 	{
