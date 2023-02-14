@@ -8,17 +8,20 @@ tempV = 2 * 3.14159265358979323846 / N;
 void FuncArray(double** my_array, int len) {
 	double* temp = (double*)malloc(sizeof(double) * len);
 #pragma acc kernels
-	for (int i = 0; i < len; i++)
-		temp[i] = sin(i*tempV);
-	*my_array = temp;
-	
+	{
+		for (int i = 0; i < len; i++)
+			temp[i] = sin(i * tempV);
+		*my_array = temp;
+	}
 }
 
 double SumArray(double** my_array, int len) {
 	double sum = 0;
 #pragma acc kernels
-	for (int i = 0; i < len; i++) {
-		sum += *my_array[i];
+	{
+		for (int i = 0; i < len; i++) {
+			sum += *my_array[i];
+		}
 	}
 	return sum;
 }
