@@ -5,13 +5,13 @@
 #include <time.h>
 #define N 100000000
 tempV = 2 * 3.14159265358979323846 / N;
-void FuncArray(double** my_array, int len) {
+void FuncArray(double* my_array, int len) {
 	//double* temp = (double*)malloc(sizeof(double) * len);
 	double step = 2 * 3.14159265358979323846 / N;
 //#pragma acc data create(temp[:len]) copyin(step)
 #pragma acc parallel loop vector vector_length(256) gang
 	for (int i = 0; i < len; i++)
-		*my_array[i] = sin(i * step);
+		my_array[i] = sin(i * step);
 }
 
 double SumArray(double* my_array, int len) {
@@ -19,7 +19,7 @@ double SumArray(double* my_array, int len) {
 //#pragma acc data copy(sum)
 #pragma acc parallel loop reduction(+:sum)
 	for (int i = 0; i < len; i++)
-		sum += *my_array[i];
+		sum += my_array[i];
 	return sum;
 }
 
