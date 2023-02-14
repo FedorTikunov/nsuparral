@@ -26,7 +26,7 @@ int main() {
 	clock_t before = clock();
 	double* array = (double*)malloc(sizeof(double)*N);
 	long long len = N;
-#pragma acc data create(array[0:MAX_SIZE]) copyin(len)
+#pragma acc data create(array[0:N]) copyin(len)
 	{
 		FuncArray(array, len);
 		printf("summa = %.10f", SumArray(array, len));
