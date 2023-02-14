@@ -27,7 +27,7 @@ double sumArray(double* arr, size_t len) {
 }
 
 int main() {
-	double sec = 0.0
+	double sec = 0.0;
 
 	double* arr = (double*)malloc(sizeof(double)*N);
 	#pragma acc data create(arr[0:N])
