@@ -43,7 +43,7 @@ int main() {
 	printf("summa = %0.23f\n", sumArray(arr, MAX_SIZE));
 
 	clock_t after = clock();
-	sec += (double)(after - before)/ CLOCKS_PER_SEC;
+	sec += (double)(clock() - before)/ CLOCKS_PER_SEC;
 	printf("Time taken: %.5f", sec);
 
 	free(arr);
