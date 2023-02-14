@@ -8,20 +8,17 @@
 void FuncArray(double** my_array, int len) {
 	double* temp = (double*)malloc(sizeof(double) * len);
 #pragma acc kernels
-	{
 	for (int i = 0; i < len; i++)
 		temp[i] = sin(i);
 	*my_array = temp;
-	}
 	
 }
 
 double SumArray(double** my_array, int len) {
 	double sum = 0;
-#pragma acc kernels{
+#pragma acc kernels
 	for (int i = 0; i < len; i++) {
 		sum += *my_array[i];
-	}
 	}
 	return sum;
 }
