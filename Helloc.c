@@ -39,7 +39,7 @@ int main() {
 	{
 	clock_t before = clock();
 
-	funcArray(arr, N);
+	funcArray(arr, MAX_SIZE);
 	printf("summa = %0.23f\n", sumArray(arr, MAX_SIZE));
 
 	sec += (double)(clock() - before)/ CLOCKS_PER_SEC;
