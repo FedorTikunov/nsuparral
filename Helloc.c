@@ -17,7 +17,7 @@ void FuncArray(double** my_array, int len) {
 
 double SumArray(double** my_array, int len) {
 	double sum = 0;
-#pragma acc data copyin(sum)
+#pragma acc data copy(sum)
 #pragma acc parallel loop reduction(+:sum)
 	for (int i = 0; i < len; i++)
 		sum += *my_array[i];
@@ -28,7 +28,7 @@ int main() {
 	clock_t before = clock();
 	double** array = (double**)malloc(sizeof(double*));
 	long long len = N;
-#pragma acc data create(array[:N])
+#pragma acc data create(array[:N]) copyin(len)
 	{
 		FuncArray(array, len);
 		printf("summa = %.10f", SumArray(array, len));
