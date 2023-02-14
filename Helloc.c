@@ -32,7 +32,7 @@ int main() {
 		clock_t before = clock();
 		FuncArray(array, len);
 		printf("summa = %0.23f\n", SumArray(array, len));
-		double sec = double(clock() - before)/ CLOCKS_PER_SEC;
+		double sec = (double)(clock() - before)/ CLOCKS_PER_SEC;
 		printf("Time taken: %.5f", sec);
 		free(array);
 	}
