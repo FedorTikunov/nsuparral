@@ -9,7 +9,7 @@ void FuncArray(double** my_array, int len) {
 	double* temp = (double*)malloc(sizeof(double) * len);
 	double step = 2 * 3.14159265358979323846 / N;
 #pragma acc data copyin(step)
-#pragma acc parallel loop vector vector_lenght(256) gang
+#pragma acc parallel loop vector vector_length(256) gang
 	for (int i = 0; i < len; i++)
 		temp[i] = sin(i * step);
 	*my_array = temp;
