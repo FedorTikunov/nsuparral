@@ -4,7 +4,7 @@
 #include <math.h>
 #include <time.h>
 #define N 100000000
-tempV = 2*3.14159265358979323846/N
+tempV = 2 * 3.14159265358979323846 / N;
 void FuncArray(double** my_array, int len) {
 	double* temp = (double*)malloc(sizeof(double) * len);
 #pragma acc kernels
