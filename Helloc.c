@@ -16,12 +16,25 @@ void FuncArray(double** my_array, int len) {
 	
 }
 
+double SumArray(double** my_array, int len) {
+	double sum = 0;
+#pragma acc kernels{
+	for (int i = 0; i < len; i++) {
+		sum += *my_array[i];
+	}
+	}
+	return sum;
+}
 
 int main() {
 	clock_t before = clock();
 	double** array = (double**)malloc(sizeof(double*));
 	long long len = N;
-	FuncArray(array, len);
+#pragma acc data create(myArray[:N])
+	{
+		FuncArray(array, len);
+		SumArray(array, len);
+	}
 	clock_t difference = clock() - before;
 	int msec = difference * 1000 / CLOCKS_PER_SEC;
 	printf("Time taken: %d", msec/1000);
