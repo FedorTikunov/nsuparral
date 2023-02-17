@@ -4,7 +4,7 @@
 #include <math.h>
 #include <time.h>
 
-#define FORMAT double
+#define FORMAT float
 #define MAX_SIZE 10000000
 
 void funcArray(FORMAT* arr, size_t len) {
@@ -35,13 +35,13 @@ FORMAT sumArray(FORMAT* arr, size_t len) {
 int main() {
 	double sec = 0.0;
 
-	FORMAT* arr = (double*)malloc(sizeof(FORMAT) * MAX_SIZE);
+	FORMAT* arr = (FORMAT*)malloc(sizeof(FORMAT) * MAX_SIZE);
 	#pragma acc data create(arr[0:MAX_SIZE])
 	{
 	clock_t before = clock();
 
 	funcArray(arr, MAX_SIZE);
-	printf("summa = %0.23lf\n", sumArray(arr, MAX_SIZE));
+	printf("summa = %0.23f\n", sumArray(arr, MAX_SIZE));
 	sec += (FORMAT)(clock() - before)/ CLOCKS_PER_SEC;
 	printf("Time taken: %.5f", sec);
 
