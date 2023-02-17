@@ -4,11 +4,12 @@
 #include <math.h>
 #include <time.h>
 
+#define FORMAT double
 #define MAX_SIZE 10000000
 
-void funcArray(double* arr, size_t len) {
+void funcArray(FORMAT* arr, size_t len) {
 
-	double step = 3.141592653589783 * 2 / MAX_SIZE;
+	FORMAT step = 3.141592653589783 * 2 / MAX_SIZE;
 
 	#pragma acc data copyin(step)
 	#pragma acc parallel loop gang num_gangs(2048) vector vector_length(64), present(arr)
@@ -18,8 +19,8 @@ void funcArray(double* arr, size_t len) {
 	}
 }
 
-double sumArray(double* arr, size_t len) {
-	double sum = 0.0;
+FORMAT sumArray(FORMAT* arr, size_t len) {
+	FORMAT sum = 0.0;
 
 	#pragma acc data copy(sum)
 	#pragma acc parallel loop gang num_gangs(2048) reduction(+:sum) present(arr)
@@ -34,14 +35,14 @@ double sumArray(double* arr, size_t len) {
 int main() {
 	double sec = 0.0;
 
-	double* arr = (double*)malloc(sizeof(double) * MAX_SIZE);
+	FORMAT* arr = (double*)malloc(sizeof(FORMAT) * MAX_SIZE);
 	#pragma acc data create(arr[0:MAX_SIZE])
 	{
 	clock_t before = clock();
 
 	funcArray(arr, MAX_SIZE);
 	printf("summa = %0.23lf\n", sumArray(arr, MAX_SIZE));
-	sec += (double)(clock() - before)/ CLOCKS_PER_SEC;
+	sec += (FORMAT)(clock() - before)/ CLOCKS_PER_SEC;
 	printf("Time taken: %.5f", sec);
 
 	free(arr);
