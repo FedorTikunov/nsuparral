@@ -5,15 +5,7 @@
 #include <time.h>
 
 #define FORMAT float
-
-#if(FORMAT == float)
-	#define PFORMAT "summa = %0.23f\n"	
-endif
-
-#if(FORMAT == double)
-	#define PFORMAT "summa = %0.23lf\n"	
-endif
-
+#define PFORMAT "summa = %0.23f\n"	
 #define MAX_SIZE 10000000
 
 void funcArray(FORMAT* arr, size_t len) {
