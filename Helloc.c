@@ -11,7 +11,7 @@ void funcArray(double* arr, size_t len) {
 	double step = 3.141592653589783 * 2 / MAX_SIZE;
 
 	#pragma acc data copyin(step)
-	#pragma acc parallel loop vector vector_length(128) gang copyout(arr[0:len])
+	#pragma acc parallel loop vector vector_length(500) gang
 	for (size_t i = 0; i < len; i++)
 	{
 		arr[i] = sin(step * i);
