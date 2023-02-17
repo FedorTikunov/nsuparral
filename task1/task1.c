@@ -5,6 +5,15 @@
 #include <time.h>
 
 #define FORMAT float
+
+#if(FORMAT == float)
+	#define PFORMAT "summa = %0.23f\n"	
+endif
+
+#if(FORMAT == double)
+	#define PFORMAT "summa = %0.23lf\n"	
+endif
+
 #define MAX_SIZE 10000000
 
 void funcArray(FORMAT* arr, size_t len) {
@@ -41,7 +50,7 @@ int main() {
 	clock_t before = clock();
 
 	funcArray(arr, MAX_SIZE);
-	printf("summa = %0.23f\n", sumArray(arr, MAX_SIZE));
+	printf(PFORMAT, sumArray(arr, MAX_SIZE));
 	sec += (FORMAT)(clock() - before)/ CLOCKS_PER_SEC;
 	printf("Time taken: %.5f", sec);
 
