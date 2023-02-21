@@ -16,7 +16,7 @@ void funcArray(FORMAT* arr, size_t len) {
 	#pragma acc parallel loop gang num_gangs(2048) vector vector_length(64), present(arr)
 	for (size_t i = 0; i < len; i++)
 	{
-		arr[i] = sin(step * i);
+		arr[i] = sinf(step * i);
 	}
 }
 
@@ -34,17 +34,15 @@ FORMAT sumArray(FORMAT* arr, size_t len) {
 }
 
 int main() {
+	clock_t before = clock();
 	double sec = 0.0;
-
 	FORMAT* arr = (FORMAT*)malloc(sizeof(FORMAT) * MAX_SIZE);
 	#pragma acc data create(arr[0:MAX_SIZE])
 	{
-	clock_t before = clock();
-
 	funcArray(arr, MAX_SIZE);
 	printf(PFORMAT, sumArray(arr, MAX_SIZE));
 	sec += (FORMAT)(clock() - before)/ CLOCKS_PER_SEC;
-	printf("Time taken: %.5f", sec);
+	printf("Time taken: %.5f\n", sec);
 
 	free(arr);
 	}
