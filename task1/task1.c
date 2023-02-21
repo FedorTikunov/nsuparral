@@ -16,7 +16,7 @@ void funcArray(FORMAT* arr, size_t len) {
 	#pragma acc parallel loop gang num_gangs(2048) vector vector_length(64), present(arr)
 	for (size_t i = 0; i < len; i++)
 	{
-		arr[i] = sin(step * i);
+		arr[i] = sinf(step * i);
 	}
 }
 
