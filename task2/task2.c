@@ -18,7 +18,6 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    // Проверки  ...
 
     double minError = std::pow(10, -std::stoi(argv[1]));
     size_t gridSize = std::stoi(argv[2]);
