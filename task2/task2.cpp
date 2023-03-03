@@ -25,7 +25,7 @@ int main() {
 		olda[i] = new double[GRID_SIZE];
 
 	clock_t beforeinit = clock();
-	#pragma acc data copy (olda[0:GRID_SIZE][0:GRID_SIZE]), copy (newa[0:GRID_SIZE][0:GRID_SIZE]) {
+	#pragma acc data copy (olda[0:GRID_SIZE][0:GRID_SIZE], newa[0:GRID_SIZE][0:GRID_SIZE]) {
 	olda[0][0] = CORN1;
 	olda[GRID_SIZE-1][0] = CORN2;
 	olda[0][GRID_SIZE - 1] = CORN3;
