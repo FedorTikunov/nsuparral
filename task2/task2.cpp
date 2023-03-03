@@ -44,7 +44,7 @@ int main() {
 		newa[GRID_SIZE - 1][i] = olda[GRID_SIZE - 1][i];
 		newa[i][GRID_SIZE - 1] = olda[i][GRID_SIZE - 1];
 	}
-	std::cout << olda[0][0] << olda[GRID_SIZE - 1][0] << olda[0][GRID_SIZE - 1] << olda[GRID_SIZE - 1][GRID_SIZE - 1] << std::endl;
+	std::cout << olda[1][0] << " " << olda[GRID_SIZE - 1][1] << " " << olda[1][GRID_SIZE - 1] << " " << olda[GRID_SIZE - 1][GRID_SIZE - 1] << std::endl;
 	std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 	clock_t beforecal = clock();
 
