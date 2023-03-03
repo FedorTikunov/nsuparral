@@ -65,7 +65,6 @@ int main() {
 
 		std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
 		std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
-
 	}
 
 	return 0;
