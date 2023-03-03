@@ -12,9 +12,6 @@
 #define ACC 0.000001
 #define GRID_SIZE 1024
 
-#define ABS(a) ((a < 0) ? (-a) : (a))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
 int main() {
 	double** newa = new double* [GRID_SIZE];
 	for (size_t i = 0; i < GRID_SIZE; i++)
@@ -24,9 +21,9 @@ int main() {
 	for (size_t i = 0; i < GRID_SIZE; i++)
 		olda[i] = new double[GRID_SIZE];
 
-	clock_t beforeinit = clock();
 	#pragma acc data copy (olda[0:GRID_SIZE][0:GRID_SIZE], newa[0:GRID_SIZE][0:GRID_SIZE]) 
 	{
+	clock_t beforeinit = clock();	
 	olda[0][0] = CORN1;
 	olda[GRID_SIZE-1][0] = CORN2;
 	olda[0][GRID_SIZE - 1] = CORN3;
@@ -35,6 +32,7 @@ int main() {
 	double prop2 = (CORN3 - CORN1) / (GRID_SIZE - 2);
 	double prop3 = (CORN4 - CORN3) / (GRID_SIZE - 2);
 	double prop4 = (CORN2 - CORN3) / (GRID_SIZE - 2);
+	std::cout << olda[0][0] << olda[GRID_SIZE - 1][0] << olda[0][GRID_SIZE - 1] << olda[GRID_SIZE - 1][GRID_SIZE - 1] << std::endl;
 	#pragma acc parallel loop seq gang num_gangs(256) vector vector_length(256)
 	for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 		olda[0][i] = olda[0][i - 1] + prop1;
@@ -46,7 +44,6 @@ int main() {
 		newa[GRID_SIZE - 1][i] = olda[GRID_SIZE - 1][i];
 		newa[i][GRID_SIZE - 1] = olda[i][GRID_SIZE - 1];
 	}
-
 	std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 	clock_t beforecal = clock();
 
@@ -56,13 +53,16 @@ int main() {
 		#pragma acc parallel loop seq gang num_gangs(256) vector vector_length(256) 
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 			for (size_t j = 1; j < GRID_SIZE - 1; j++) {
-				newa[i][j] = (olda[i + 1][j] + olda[i - 1][j] + olda[i][j - 1] + olda[i][j + 1]) / 4;
-				error = MAX(error, ABS(newa[i][j] - olda[i][j]));
+ 				printf("%lf %lf %lf %lf\n", olda[i + 1][j], olda[i - 1][j], olda[i][j-1], olda[i][j+1]);
+				newa[i][j] = (olda[i + 1][j] + olda[i - 1][j] + olda[i][j - 1] + olda[i][j + 1]) * 0.25;
+				error = std::max(error, std::abs(newa[i][j] - olda[i][j]));
+				printf("%lf\n", newa[i][j]);
 			}
 		}
 		iter_count++;
+		std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
 	}
-
+	
 	std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
 	std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
 
