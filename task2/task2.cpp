@@ -12,6 +12,8 @@
 #define ACC 0.000001
 #define GRID_SIZE 1024
 
+#define ABS(a) ((a < 0) ? (-a) : (a))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 int main() {
 	double** newa = new double* [GRID_SIZE];
@@ -49,12 +51,12 @@ int main() {
 
 	int iter_count = 0;
 	double error = 0.0;
-	#pragma acc parallel loop seq vector vector_length(256) gang num_gangs(256)
+	#pragma acc parallel loop seq gang num_gangs(256) vector vector_length(256) 
 	while (iter_count < ITER && error < ACC) {
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 			for (size_t j = 1; j < GRID_SIZE - 1; j++) {
-				newa[i][j] = 0.25 * (olda[i + 1 + j * GRID_SIZE] + olda[i - 1 + j * GRID_SIZE] + olda[i + (j - 1) * GRID_SIZE] + olda[i + (j + 1) * GRID_SIZE]);
-				error = std::max(error, newa[i + j * GRID_SIZE] - olda[i + j * GRID_SIZE]);
+				newa[i][j] = (olda[i + 1][j] + olda[i - 1][j] + olda[i][j - 1] + olda[i][j + 1]) / 4;
+				error = MAX(error, ABS(newa[i][j] - olda[i][j]));
 			}
 		}
 		iter_count++;
