@@ -1,13 +1,13 @@
 ﻿#include <iostream>
 #include <string>
 #include <cmath>
+#include <ctime>
 
 
-
-#define CORN1 10
-#define CORN2 20
-#define CORN3 30
-#define CORN4 20
+#define CORN1 10.0
+#define CORN2 20.0
+#define CORN3 30.0
+#define CORN4 20.0
 #define ITER 10000000
 #define ACC 0.000001
 #define GRID_SIZE 1024
