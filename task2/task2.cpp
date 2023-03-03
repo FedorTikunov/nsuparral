@@ -52,7 +52,7 @@ int main() {
 
 	int iter_count = 0;
 	double error = 0.0;
-	#pragma acc parallel loop seq gang num_gangs(256) vector vector_length(256) 
+	#pragma acc parallel loop seq vector vector_length(256) gang num_gangs(256) 
 	while (iter_count < ITER && error < ACC) {
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 			for (size_t j = 1; j < GRID_SIZE - 1; j++) {
