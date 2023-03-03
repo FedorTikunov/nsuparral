@@ -46,7 +46,7 @@ int main() {
 		newa[i][GRID_SIZE - 1] = olda[i][GRID_SIZE - 1];
 	}
 
-	std::cout << "Initialization time: " << 1.0 * (clock() - before) / CLOCKS_PER_SEC << std::endl;
+	std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 	clock_t beforecal = clock();
 
 	int iter_count = 0;
