@@ -51,7 +51,7 @@ int main() {
 	while (iter_count < ITER && error > ACC) {
 		error = 0.000001;
 		//printf("1: %lf\n", error);
-		#pragma acc parallel loop copy(error) gang num_gangs(256) vector vector_length(256) present(olda[0:GRID_SIZE][0:GRID_SIZE], newa[0:GRID_SIZE][0:GRID_SIZE])
+		#pragma acc parallel loop independent reduction(max:error) collapse(2) gang num_gangs(256) vector vector_length(256) present(olda[0:GRID_SIZE][0:GRID_SIZE], newa[0:GRID_SIZE][0:GRID_SIZE])
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 			for (size_t j = 1; j < GRID_SIZE - 1; j++) {
 				newa[i][j] = (olda[i + 1][j] + olda[i - 1][j] + olda[i][j - 1] + olda[i][j + 1]) * 0.25;
