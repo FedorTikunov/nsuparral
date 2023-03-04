@@ -25,45 +25,46 @@ int main() {
 	{
 	clock_t beforeinit = clock();
 	olda[0][0] = CORN1;
-	olda[GRID_SIZE - 1][0] = CORN2;
-	olda[0][GRID_SIZE - 1] = CORN3;
+	olda[GRID_SIZE - 1][0] = CORN3;
+	olda[0][GRID_SIZE - 1] = CORN2;
 	olda[GRID_SIZE - 1][GRID_SIZE - 1] = CORN4;
-	double prop1 = (CORN2 - CORN1) / (GRID_SIZE - 2);
-	double prop2 = (CORN3 - CORN1) / (GRID_SIZE - 2);
-	double prop3 = (CORN4 - CORN3) / (GRID_SIZE - 2);
-	double prop4 = (CORN2 - CORN3) / (GRID_SIZE - 2);
-	std::cout << olda[0][0] << olda[GRID_SIZE - 1][0] << olda[0][GRID_SIZE - 1] << olda[GRID_SIZE - 1][GRID_SIZE - 1] << std::endl;
-	#pragma acc parallel loop seq gang num_gangs(256) vector vector_length(256)
+	double prop1 = (CORN2 - CORN1) / (GRID_SIZE);
+	double prop2 = (CORN3 - CORN1) / (GRID_SIZE);
+	double prop3 = (CORN4 - CORN3) / (GRID_SIZE);
+	double prop4 = (CORN2 - CORN3) / (GRID_SIZE);
+	#pragma acc parallel loop gang num_gangs(256) vector vector_length(256) present(olda[0:GRID_SIZE][0:GRID_SIZE], newa[0:GRID_SIZE][0:GRID_SIZE]) 
 	for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 		olda[0][i] = olda[0][i - 1] + prop1;
 		olda[i][0] = olda[i - 1][0] + prop2;
-		olda[GRID_SIZE - 1][i] = olda[GRID_SIZE - 1][i - 1] + prop3;
-		olda[i][GRID_SIZE - 1] = olda[i - 1][GRID_SIZE - 1] + prop4;
+		olda[GRID_SIZE - 1][i] = olda[GRID_SIZE - 1][i - 1] + prop4;
+		olda[i][GRID_SIZE - 1] = olda[i - 1][GRID_SIZE - 1] + prop3;
 		newa[0][i] = olda[0][i];
 		newa[i][0] = olda[i][0];
 		newa[GRID_SIZE - 1][i] = olda[GRID_SIZE - 1][i];
 		newa[i][GRID_SIZE - 1] = olda[i][GRID_SIZE - 1];
 	}
-	std::cout << olda[1][0] << " " << olda[GRID_SIZE - 1][1] << " " << olda[1][GRID_SIZE - 1] << " " << olda[GRID_SIZE - 1][GRID_SIZE - 1] << std::endl;
 	std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 	clock_t beforecal = clock();
 
 	int iter_count = 0;
-	double error = 0.0;
-	while (iter_count < ITER && error < ACC) {
-	#pragma acc parallel loop seq gang num_gangs(256) vector vector_length(256) 
+	double error = 1.0;
+	while (iter_count < ITER && error > ACC) {
+		error = 0.000001;
+		//printf("1: %lf\n", error);
+		#pragma acc parallel loop collapse(2) gang num_gangs(256) vector vector_length(256) present(olda[0:GRID_SIZE][0:GRID_SIZE], newa[0:GRID_SIZE][0:GRID_SIZE])
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 			for (size_t j = 1; j < GRID_SIZE - 1; j++) {
-				printf("%lf %lf %lf %lf\n", olda[i + 1][j], olda[i - 1][j], olda[i][j - 1], olda[i][j + 1]);
 				newa[i][j] = (olda[i + 1][j] + olda[i - 1][j] + olda[i][j - 1] + olda[i][j + 1]) * 0.25;
 				error = std::max(error, std::abs(newa[i][j] - olda[i][j]));
-				printf("%lf\n", newa[i][j]);
 			}
 		}
+		//printf("3: %lf\n", error);
 		iter_count++;
-		std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
+		double** c = olda;
+		olda = newa;
+		newa = c;
+		//printf("%d %lf\n", iter_count, error);
 	}
-
 	std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
 	std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
 	}
