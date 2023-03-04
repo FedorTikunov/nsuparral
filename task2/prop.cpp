@@ -28,7 +28,9 @@ int main() {
 	olda[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	#pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
-	#pragma acc parallel loop gang num_gangs(256) vector vector_length(256) present(olda, newa) 
+
+	#pragma acc data present(newa, olda)
+	#pragma acc parallel loop gang num_gangs(256) vector vector_length(256) async(1)
 	for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 		olda[i] = olda[0] + prop1 * i;
 		olda[i * GRID_SIZE] = olda[0] + prop2 * i;
@@ -41,7 +43,7 @@ int main() {
 	}
 
 	while (iter_count < ITER && error > ACC) {
-	
+
 	#pragma acc kernels async(1)
 	error = 0.000001;
 	#pragma acc update device(error) async(1)
