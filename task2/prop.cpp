@@ -26,6 +26,8 @@ int main() {
 	olda[(GRID_SIZE - 1) * GRID_SIZE] = CORN3;
 	olda[GRID_SIZE - 1] = CORN2;
 	olda[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
+	clock_t beforeinit = clock();
+
 	#pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
 
@@ -41,6 +43,8 @@ int main() {
 		newa[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE + i];
 		newa[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * i + GRID_SIZE - 1];
 	}
+	std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl
+	clock_t beforecal = clock();
 
 	while (iter_count < ITER && error > ACC) {
 
@@ -67,6 +71,7 @@ int main() {
 	newa = c;
 	}
 	}
+	std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
 	std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
 	return 0;
 }
