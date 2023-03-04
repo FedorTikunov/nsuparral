@@ -18,34 +18,35 @@ int main() {
 	int iter_count = 0;
         double error = 1.0;
         olda[0] = CORN1;
-	olda[(GRID_SIZE - 1) * GRID_SIZE] = CORN3;
-	olda[GRID_SIZE - 1] = CORN2;
-	olda[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
-	newa[0] = CORN1;
-	newa[(GRID_SIZE - 1) * GRID_SIZE] = CORN3;
-	newa[GRID_SIZE - 1] = CORN2;
-	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	double prop1 = (CORN2 - CORN1) / (GRID_SIZE);
 	double prop2 = (CORN3 - CORN1) / (GRID_SIZE);
 	double prop3 = (CORN4 - CORN3) / (GRID_SIZE);
 	double prop4 = (CORN2 - CORN4) / (GRID_SIZE);
+	olda[0] = CORN1;
+	olda[(GRID_SIZE - 1) * GRID_SIZE] = CORN3;
+	olda[GRID_SIZE - 1] = CORN2;
+	olda[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
+	#pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
+	{
+	#pragma acc parallel loop gang num_gangs(256) vector vector_length(256) present(olda, newa) 
 	for (size_t i = 1; i < GRID_SIZE - 1; i++) {
-		olda[i] = olda[i - 1] + prop1;
-		olda[i * GRID_SIZE] = olda[(i - 1) * GRID_SIZE] + prop2;
-		olda[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE + (i - 1)] + prop3;
-		olda[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * (i - 1) + GRID_SIZE - 1] + prop4;
+		olda[i] = olda[0] + prop1 * i;
+		olda[i * GRID_SIZE] = olda[0] + prop2 * i;
+		olda[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE] + prop3 * i;
+		olda[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * (GRID_SIZE - 1) + GRID_SIZE - 1] + prop4 * i;
 		newa[i] = olda[i];
 		newa[i * GRID_SIZE] = olda[i * GRID_SIZE];
 		newa[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE + i];
 		newa[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * i + GRID_SIZE - 1];
-	 }
-	#pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
-	{	
+	}
+
 	while (iter_count < ITER && error > ACC) {
 	
 	#pragma acc kernels async(1)
 	error = 0.000001;
 	#pragma acc update device(error) async(1)
+	
+
 
 	#pragma acc data present(newa, olda, error)
 	#pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) reduction(max:error) async(1)
