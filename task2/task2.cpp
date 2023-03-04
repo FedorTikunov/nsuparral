@@ -16,7 +16,7 @@ int main() {
 	double* newa = new double [GRID_SIZE * GRID_SIZE];
 	double* olda = new double [GRID_SIZE * GRID_SIZE];
 	#pragma acc data copy (olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)]) 
-	{
+	{:
 	clock_t beforeinit = clock();
 	olda[0] = CORN1;
 	olda[(GRID_SIZE - 1)* GRID_SIZE] = CORN3;
