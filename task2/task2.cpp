@@ -31,31 +31,35 @@ int main() {
 	newa[GRID_SIZE - 1] = CORN2;
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	clock_t beforeinit = clock();
-	for (size_t i = 1; i < GRID_SIZE - 1; i++) {
-		olda[i] = olda[0] + prop1 * i;
-		olda[i * GRID_SIZE] = olda[0] + prop2 * i;
-		olda[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE] + prop3 * i;
-		olda[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * (GRID_SIZE - 1) + GRID_SIZE - 1] + prop4 * i;
-		newa[i] = olda[i];
-		newa[i * GRID_SIZE] = olda[i * GRID_SIZE];
-		newa[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE + i];
-		newa[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * i + GRID_SIZE - 1];
-	}
-	std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
+
 #pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
 
+#pragma acc data present(newa, olda)
+#pragma acc parallel loop gang num_gangs(256) vector vector_length(256) async(2)
+		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
+			olda[i] = olda[0] + prop1 * i;
+			olda[i * GRID_SIZE] = olda[0] + prop2 * i;
+			olda[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE] + prop3 * i;
+			olda[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * (GRID_SIZE - 1) + GRID_SIZE - 1] + prop4 * i;
+			newa[i] = olda[i];
+			newa[i * GRID_SIZE] = olda[i * GRID_SIZE];
+			newa[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE + i];
+			newa[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * i + GRID_SIZE - 1];
+		}
+#pragma acc wait(1) async(2)
+		std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 		clock_t beforecal = clock();
 		while (iter_count < ITER && error > ACC) {
 
 			if (iter_count % 100 == 0) {
-			#pragma acc kernels async(1)
+#pragma acc kernels async(2)
 				error = 0.000001;
-			#pragma acc update device(error) async(1)
+#pragma acc update device(error) async(2)
 			}
 
-			#pragma acc data present(newa, olda, error)
-			#pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) reduction(max:error) async(1)
+#pragma acc data present(newa, olda, error)
+#pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) reduction(max:error) async(2)
 			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
 					newa[i * GRID_SIZE + j] = 0.25 * (olda[(i + 1) * GRID_SIZE + j] + olda[(i - 1) * GRID_SIZE + j] + olda[i * GRID_SIZE + j - 1] + olda[i * GRID_SIZE + j + 1]);
@@ -63,9 +67,9 @@ int main() {
 				}
 			}
 			if (iter_count % 100 == 0) {
-			#pragma acc update host(error) async(1)
+#pragma acc update host(error) async(2)
 
-			#pragma acc wait(1)
+#pragma acc wait(2) 
 			}
 			iter_count++;
 			double* c = olda;
