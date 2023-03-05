@@ -8,11 +8,11 @@
 #define CORN2 20.0
 #define CORN3 30.0
 #define CORN4 20.0
-#define ITER 10000000
-#define ACC 0.000001
-#define GRID_SIZE 1024
 
-int main() {
+int main(int a, int size, int col) {
+	int GRID_SIZE = size;
+	double ACC = std::pow(10, -std::stoi(a));
+	int ITER = col;
 	double* newa = new double[GRID_SIZE * GRID_SIZE];
 	double* olda = new double[GRID_SIZE * GRID_SIZE];
 	int iter_count = 0;
