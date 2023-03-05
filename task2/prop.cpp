@@ -10,7 +10,7 @@
 #define CORN4 20.0
 #define ITER 10000000
 #define ACC 0.000001
-#define GRID_SIZE 128
+#define GRID_SIZE 1024
 
 int main() {
 	double* newa = new double[GRID_SIZE * GRID_SIZE];
