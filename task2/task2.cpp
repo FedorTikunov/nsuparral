@@ -10,7 +10,7 @@
 #define CORN4 20.0
 #define ITER 10000000
 #define ACC 0.000001
-#define GRID_SIZE 128
+#define GRID_SIZE 1024
 
 int main() {
 	double* newa = new double[GRID_SIZE * GRID_SIZE];
@@ -51,7 +51,7 @@ int main() {
 		std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 		clock_t beforecal = clock();
 		while (iter_count < ITER && error > ACC) {
-
+			iter_count++;
 			if (iter_count % 100 == 0) {
 #pragma acc kernels async(2)
 				error = 0.000001;
@@ -63,7 +63,7 @@ int main() {
 			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
 					newa[i * GRID_SIZE + j] = 0.25 * (olda[(i + 1) * GRID_SIZE + j] + olda[(i - 1) * GRID_SIZE + j] + olda[i * GRID_SIZE + j - 1] + olda[i * GRID_SIZE + j + 1]);
-					error = fmax(error, fabs(newa[i * GRID_SIZE + j] - olda[i * GRID_SIZE + j]));
+					error = std::max(error, std::abs(newa[i * GRID_SIZE + j] - olda[i * GRID_SIZE + j]));
 				}
 			}
 			if (iter_count % 100 == 0) {
@@ -71,7 +71,6 @@ int main() {
 
 #pragma acc wait(2) 
 			}
-			iter_count++;
 			double* c = olda;
 			olda = newa;
 			newa = c;
