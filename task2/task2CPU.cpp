@@ -9,10 +9,10 @@
 #define CORN3 30.0
 #define CORN4 20.0
 
-int main(int a, int size, int col) {
-	int GRID_SIZE = size;
-	double ACC = std::pow(10, -std::stoi(a));
-	int ITER = col;
+int main(int argc, char** argv) {
+	int GRID_SIZE = std::stoi(argv[2]);
+	double ACC = std::pow(10, -(std::stoi(argv[1])));
+	int ITER = std::stoi(argv[3]);;
 	double* newa = new double[GRID_SIZE * GRID_SIZE];
 	double* olda = new double[GRID_SIZE * GRID_SIZE];
 	int iter_count = 0;
