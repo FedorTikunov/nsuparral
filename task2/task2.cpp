@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 	{
 
 #pragma acc data present(newa, olda)
-#pragma acc parallel loop gang num_gangs(256) vector vector_length(256)
+#pragma acc parallel loop gang num_gangs(256) vector vector_length(256) async(2)
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 			olda[i] = olda[0] + prop1 * i;
 			olda[i * GRID_SIZE] = olda[0] + prop2 * i;
