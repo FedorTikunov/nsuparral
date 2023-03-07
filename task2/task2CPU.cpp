@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 			//if (iter_count % 100 == 0) {
 #pragma acc update host(error) async(2)
 
-#pragma acc wait 
+#pragma acc wait(2) 
 			//}
 			double* c = olda;
 			olda = newa;
