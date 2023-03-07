@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 			newa[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE + i];
 			newa[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * i + GRID_SIZE - 1];
 		}
-#pragma acc wait(1) async(2)
+#pragma acc wait(1)
 		std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 		clock_t beforecal = clock();
 		while (iter_count < ITER && error > ACC) {
