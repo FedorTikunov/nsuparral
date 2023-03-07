@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
 			//}
 
 #pragma acc data present(newa, olda, error)
-#pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) reduction(max:error) async(2)
+#pragma acc parallel loop collapse(2) independent vector vector_length(256) gang num_gangs(256) reduction(max:error) async(2)
 			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
 					newa[i * GRID_SIZE + j] = 0.25 * (olda[(i + 1) * GRID_SIZE + j] + olda[(i - 1) * GRID_SIZE + j] + olda[i * GRID_SIZE + j - 1] + olda[i * GRID_SIZE + j + 1]);
