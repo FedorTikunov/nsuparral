@@ -53,7 +53,6 @@ int main(int argc, char** argv) {
 		while (iter_count < ITER && error > ACC) {
 			iter_count++;
 			if (iter_count % 100 == 0) {
-#pragma acc kernels async(2)
 				error = 0.000001;
 #pragma acc update device(error) async(2)
 			}
