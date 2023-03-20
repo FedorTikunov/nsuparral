@@ -74,6 +74,11 @@ int main(int argc, char** argv) {
 			double* c = olda;
 			olda = newa;
 			newa = c;
+			#pragma acc kernels
+			{
+				printf("error_acc_end = %lf\n", error);
+			}
+			printf("error_cpu_end = %lf\n", error);
 		}
 		std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
 	}
