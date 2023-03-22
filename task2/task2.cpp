@@ -53,9 +53,8 @@ int main(int argc, char** argv) {
 		while (iter_count < ITER && error > ACC) {
 			iter_count++;
 			if (iter_count % 100 == 0) {
-#pragma acc kernels async(2)
 				error = 0.000001;
-#pragma acc update device(error) async(2)
+			#pragma acc update device(error) async(2)
 			}
 
 #pragma acc data present(newa, olda, error)
@@ -64,21 +63,22 @@ int main(int argc, char** argv) {
 				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
 					newa[i * GRID_SIZE + j] = 0.25 * (olda[(i + 1) * GRID_SIZE + j] + olda[(i - 1) * GRID_SIZE + j] + olda[i * GRID_SIZE + j - 1] + olda[i * GRID_SIZE + j + 1]);
 					error = std::max(error, std::abs(newa[i * GRID_SIZE + j] - olda[i * GRID_SIZE + j]));
+					//printf("mid error: %lf\n", error);
 				}
 			}
+			//printf("iter: %d\n", iter_count);
+			//#pragma acc kernels async(2)
+			//{
+			//	printf("error_acc_end = %lf\n", error);
+			//}
+			//printf("error_cpu_end = %lf\n", error);
 			if (iter_count % 100 == 0) {
 #pragma acc update host(error) async(2)
-
 #pragma acc wait(2)
 			}
 			double* c = olda;
 			olda = newa;
 			newa = c;
-			#pragma acc kernels
-			{
-				printf("error_acc_end = %lf\n", error);
-			}
-			printf("error_cpu_end = %lf\n", error);
 		}
 		std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
 	}
