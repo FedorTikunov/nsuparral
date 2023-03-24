@@ -11,18 +11,20 @@
 #define CORN3 30.0
 #define CORN4 20.0
 
-__device__ void MatAdd(double olda[(GRID_SIZE * GRID_SIZE)], double newa[GRID_SIZE][GRID_SIZE]) {
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
-	int j = blockIdx.y * blockDim.y + threadIdx.y;
-	for (i < N && j < N)
-		olda[j* GRID_SIZE + i ] = std::abs(olda[j * GRID_SIZE + i] - newa[j * GRID_SIZE + i]);
+__global__ void MatAdd(double olda[][128*128], double newa[][128*128]) {
+	        int i = blockIdx.x * blockDim.x + threadIdx.x;
+		int j = blockIdx.y * blockDim.y + threadIdx.y;
+		if  (i < 128 && j < 128) {
+			olda[j* 128 + i ] = std::abs(olda[j * 128 + i] - newa[j * 128 + i]);
+		}
 }
-
 
 int main(int argc, char** argv) {
 	int GRID_SIZE = std::stoi(argv[2]);
 	double ACC = std::pow(10, -(std::stoi(argv[1])));
 	int ITER = std::stoi(argv[3]);
+	cublasHandle_t handle;
+	cublasCreate(&handle);
 	double* newa = new double[GRID_SIZE * GRID_SIZE];
 	double* olda = new double[GRID_SIZE * GRID_SIZE];
 	int iter_count = 0;
@@ -42,7 +44,7 @@ int main(int argc, char** argv) {
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	clock_t beforeinit = clock();
 
-#pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
+#pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)], GRID_SIZE)
 	{
 
 #pragma acc data present(newa, olda)
@@ -75,16 +77,15 @@ int main(int argc, char** argv) {
 					error = std::max(error, std::abs(newa[i * GRID_SIZE + j] - olda[i * GRID_SIZE + j]));
 				}
 			}
+			int index = 0;
 #pragma acc host_data use_device(newa, olda)
 			{
-			cublasHandle_t handle;
-			cublasCreate(&handle);
-
-			dim3 threadsPerBlock(16, 16);
+			dim3 threadsPerBlock(GRID_SIZE, GRID_SIZE);
 			dim3 numBlocks(GRID_SIZE / threadsPerBlock.x, GRID_SIZE / threadsPerBlock.y);
-			MatAdd << < numBlocks, threadsPerBlock >> > (newa, olda);
+			MatAdd <<< 1, threadsPerBlock >>> (newa, olda);
 
-			cublasIdamax(handle, GRID_SIZE, olda, 1, error);
+			cublasIdamax(handle, GRID_SIZE, olda, 1, &index);
+			error = olda[index];
 			}
 			if (iter_count % 100 == 0) {
 #pragma acc update host(error) async(2)
