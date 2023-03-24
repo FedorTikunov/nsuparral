@@ -27,6 +27,7 @@ int main(int argc, char** argv) {
 	cublasCreate(&handle);
 	double* newa = new double[GRID_SIZE * GRID_SIZE];
 	double* olda = new double[GRID_SIZE * GRID_SIZE];
+	double* dif = new double[GRID_SIZE * GRID_SIZE];
 	int iter_count = 0;
 	double error = 1.0;
 	olda[0] = CORN1;
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	clock_t beforeinit = clock();
 
-#pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)], GRID_SIZE)
+#pragma acc enter data copyin(error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)], dif[0:(GRID_SIZE * GRID_SIZE)])
 	{
 
 #pragma acc data present(newa, olda)
@@ -74,20 +75,17 @@ int main(int argc, char** argv) {
 			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
 					newa[i * GRID_SIZE + j] = 0.25 * (olda[(i + 1) * GRID_SIZE + j] + olda[(i - 1) * GRID_SIZE + j] + olda[i * GRID_SIZE + j - 1] + olda[i * GRID_SIZE + j + 1]);
-					error = std::max(error, std::abs(newa[i * GRID_SIZE + j] - olda[i * GRID_SIZE + j]));
 				}
 			}
 			int index = 0;
-#pragma acc host_data use_device(newa, olda)
+#pragma acc host_data use_device(newa, olda, dif)
 			{
-			dim3 threadsPerBlock(GRID_SIZE, GRID_SIZE);
-			dim3 numBlocks(GRID_SIZE / threadsPerBlock.x, GRID_SIZE / threadsPerBlock.y);
-			MatAdd <<< 1, threadsPerBlock >>> (newa, olda);
-
-			cublasIdamax(handle, GRID_SIZE, olda, 1, &index);
-			error = olda[index];
+			cublasDgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, GRID_SIZE, GRID_SIZE, GRID_SIZE, 1.0, newa,  GRID_SIZE, olda, GRID_SIZE, -1.0, dif, GRID_SIZE)
+			cublasIdamax(handle, GRID_SIZE, dif, 1, &index);
+			error = dif[index-1];
 			}
 			if (iter_count % 100 == 0) {
+
 #pragma acc update host(error) async(2)
 
 #pragma acc wait(2)
