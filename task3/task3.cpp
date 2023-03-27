@@ -55,9 +55,9 @@ int main(int argc, char** argv) {
 		}
 		std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 		clock_t beforecal = clock();
+#pragma acc wait(1) async(2)
 		while (iter_count < ITER && error > ACC) {
 			iter_count++;
-#pragma acc wait(1) async(2)
 #pragma acc data present(olda, newa)
 #pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) async(2)
 			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
@@ -65,10 +65,9 @@ int main(int argc, char** argv) {
 					newa[i * GRID_SIZE + j] = 0.25 * (olda[(i + 1) * GRID_SIZE + j] + olda[(i - 1) * GRID_SIZE + j] + olda[i * GRID_SIZE + j - 1] + olda[i * GRID_SIZE + j + 1]);
 				}
 			}
-#pragma acc wait(2)
 			if(iter_count % 100 == 0)
 			{
-#pragma acc data present(olda, newa)
+#pragma acc data present(olda, newa) wait
 #pragma acc host_data use_device(olda, newa)
 			{
 			status = cublasDaxpy(handle, GRID_SIZE * GRID_SIZE, &beta , newa, 1, olda, 1);
