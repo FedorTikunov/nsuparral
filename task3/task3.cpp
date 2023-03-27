@@ -36,12 +36,12 @@ int main(int argc, char** argv) {
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	clock_t beforeinit = clock();
 
-#pragma acc enter data copyin (GRID_SIZE, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
+#pragma acc enter data copyin (olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
 	
 	double beta = -1.0;
 	int index = 0;
-#pragma acc data present(newa, olda)
+#pragma acc data present(olda, newa)
 #pragma acc parallel loop gang num_gangs(256) vector vector_length(256) async(1)
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 			olda[i] = olda[0] + prop1 * i;
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 		while (iter_count < ITER && error > ACC) {
 			iter_count++;
 #pragma acc wait(1) async(2)
-#pragma acc data present(newa, olda)
+#pragma acc data present(olda, newa)
 #pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) async(2)
 			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
@@ -68,8 +68,8 @@ int main(int argc, char** argv) {
 #pragma acc wait(2)
 			if(iter_count % 100 == 0)
 			{
-#pragma acc data present(newa, olda)
-#pragma acc host_data use_device(newa, olda)
+#pragma acc data present(olda, newa)
+#pragma acc host_data use_device(olda, newa)
 			{
 			status = cublasDaxpy(handle, GRID_SIZE * GRID_SIZE, &beta , newa, 1, olda, 1);
 			status = cublasIdamax(handle, GRID_SIZE * GRID_SIZE, olda, 1, &index);
@@ -77,12 +77,11 @@ int main(int argc, char** argv) {
 			//std::cout << index << std::endl)
 			//#pragma acc update self(olda[0:GRID_SIZE * GRID_SIZE])
 #pragma acc update host(olda[index - 1]) 
-			error = fabs(olda[index-1]);
-			
-			#pragma acc host_data use_device(newa, olda)
+			error = std::abs(olda[index-1]);	
+#pragma acc host_data use_device(olda, newa)
 			status = cublasDcopy(handle, GRID_SIZE * GRID_SIZE, newa, 1, olda, 1);
-			
 			}
+			std::cout << error << std::endl;
 			double* c = olda;
 			olda = newa;
 			newa = c;
