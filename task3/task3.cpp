@@ -1,7 +1,8 @@
-#include <iostream>
+﻿#include <iostream>
 #include <cstring>
 #include <cmath>
 #include <ctime>
+
 #include <cuda_runtime.h>
 #include "cublas_v2.h"
 
@@ -14,18 +15,24 @@ int main(int argc, char** argv) {
 	int GRID_SIZE = std::stoi(argv[2]);
 	double ACC = std::pow(10, -(std::stoi(argv[1])));
 	int ITER = std::stoi(argv[3]);
+
 	cublasStatus_t status;
-	cublasHandle_t handle;
-	status = cublasCreate(&handle);
+	cublasHandle_t handler;
+	cudaError err;
+
+	status = cublasCreate(&handler);
 	double* newa = new double[GRID_SIZE * GRID_SIZE];
 	double* olda = new double[GRID_SIZE * GRID_SIZE];
+	
 	int iter_count = 0;
 	double error = 1.0;
+	
 	olda[0] = CORN1;
 	double prop1 = (CORN2 - CORN1) / (GRID_SIZE);
 	double prop2 = (CORN3 - CORN1) / (GRID_SIZE);
 	double prop3 = (CORN4 - CORN3) / (GRID_SIZE);
 	double prop4 = (CORN2 - CORN4) / (GRID_SIZE);
+
 	olda[0] = CORN1;
 	olda[(GRID_SIZE - 1) * GRID_SIZE] = CORN3;
 	olda[GRID_SIZE - 1] = CORN2;
@@ -56,37 +63,51 @@ int main(int argc, char** argv) {
 		std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
 		clock_t beforecal = clock();
 #pragma acc wait(1) async(2)
-		while (iter_count < ITER && error > ACC) {
+		while (iter_count < ITER && error > ACC)
+		{
 			iter_count++;
+
 #pragma acc data present(olda, newa)
 #pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) async(2)
 			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
-					newa[i * GRID_SIZE + j] = 0.25 * (olda[(i + 1) * GRID_SIZE + j] + olda[(i - 1) * GRID_SIZE + j] + olda[i * GRID_SIZE + j - 1] + olda[i * GRID_SIZE + j + 1]);
+					newa[i * GRID_SIZE + j] = 0.25 * 
+						(olda[(i + 1) * GRID_SIZE + j] + 
+							olda[(i - 1) * GRID_SIZE + j] + 
+							olda[i * GRID_SIZE + j - 1] + 
+							olda[i * GRID_SIZE + j + 1]);
 				}
 			}
 			if(iter_count % 100 == 0)
 			{
-#pragma acc data present(olda, newa) wait
+#pragma acc data present (olda, newa) wait
 #pragma acc host_data use_device(olda, newa)
-			{
-			status = cublasDaxpy(handle, GRID_SIZE * GRID_SIZE, &beta , newa, 1, olda, 1);
-			status = cublasIdamax(handle, GRID_SIZE * GRID_SIZE, olda, 1, &index);
-			}
-			//std::cout << index << std::endl)
-			//#pragma acc update self(olda[0:GRID_SIZE * GRID_SIZE])
+				{
+			status = cublasDaxpy(handler, GRID_SIZE * GRID_SIZE, &beta, newa, 1, olda, 1);
+			status = cublasIdamax(handler, GRID_SIZE * GRID_SIZE, olda, 1, &index);
+				}
+
 #pragma acc update host(olda[index - 1]) 
-			error = std::abs(olda[index-1]);	
+				error = std::abs(olda[index - 1]);
+
+	
 #pragma acc host_data use_device(olda, newa)
-			status = cublasDcopy(handle, GRID_SIZE * GRID_SIZE, newa, 1, olda, 1);
+			status = cublasDcopy(handler, GRID_SIZE * GRID_SIZE, newa, 1, olda, 1);
 			}
-			std::cout << error << std::endl;
-			double* c = olda;
+
+			double* temp = olda;
 			olda = newa;
-			newa = c;
+			newa = temp;
 		}
 		std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
 	}
+
+	
+
 	std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
+
+	delete[] olda;
+	delete[] newa;
+
 	return 0;
 }
