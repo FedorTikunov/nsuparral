@@ -14,8 +14,9 @@ int main(int argc, char** argv) {
 	int GRID_SIZE = std::stoi(argv[2]);
 	double ACC = std::pow(10, -(std::stoi(argv[1])));
 	int ITER = std::stoi(argv[3]);
+	cublasStatus_t status;
 	cublasHandle_t handle;
-	cublasCreate(&handle);
+	status = cublasCreate(&handle);
 	double* newa = new double[GRID_SIZE * GRID_SIZE];
 	double* olda = new double[GRID_SIZE * GRID_SIZE];
 	int iter_count = 0;
@@ -35,13 +36,13 @@ int main(int argc, char** argv) {
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	clock_t beforeinit = clock();
 
-#pragma acc enter data copyin (error, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
+#pragma acc enter data copyin (GRID_SIZE, olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
 	
 	double beta = -1.0;
 	int index = 0;
 #pragma acc data present(newa, olda)
-#pragma acc parallel loop gang num_gangs(256) vector vector_length(256)
+#pragma acc parallel loop gang num_gangs(256) vector vector_length(256) async(1)
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 			olda[i] = olda[0] + prop1 * i;
 			olda[i * GRID_SIZE] = olda[0] + prop2 * i;
@@ -56,25 +57,31 @@ int main(int argc, char** argv) {
 		clock_t beforecal = clock();
 		while (iter_count < ITER && error > ACC) {
 			iter_count++;
+#pragma acc wait(1) async(2)
 #pragma acc data present(newa, olda)
-#pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256)
+#pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) async(2)
 			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
 				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
 					newa[i * GRID_SIZE + j] = 0.25 * (olda[(i + 1) * GRID_SIZE + j] + olda[(i - 1) * GRID_SIZE + j] + olda[i * GRID_SIZE + j - 1] + olda[i * GRID_SIZE + j + 1]);
 				}
 			}
+#pragma acc wait(2)
+			if(iter_count % 100 == 0)
+			{
 #pragma acc data present(newa, olda)
 #pragma acc host_data use_device(newa, olda)
 			{
-			cublasDaxpy(handle, GRID_SIZE * GRID_SIZE, &beta , newa, 1, olda, 1);
-			cublasIdamax(handle, GRID_SIZE * GRID_SIZE, olda, 1, &index);
+			status = cublasDaxpy(handle, GRID_SIZE * GRID_SIZE, &beta , newa, 1, olda, 1);
+			status = cublasIdamax(handle, GRID_SIZE * GRID_SIZE, olda, 1, &index);
 			}
-			std::cout << index << std::endl;
-			if (iter_count % 100 == 0) {
-//#pragma acc kernels
-#pragma acc update host(olda[index -1])
-				error = olda[index -1];
-//#pragma acc update host(error)
+			//std::cout << index << std::endl)
+			//#pragma acc update self(olda[0:GRID_SIZE * GRID_SIZE])
+#pragma acc update host(olda[index - 1]) 
+			error = fabs(olda[index-1]);
+			
+			#pragma acc host_data use_device(newa, olda)
+			status = cublasDcopy(handle, GRID_SIZE * GRID_SIZE, newa, 1, olda, 1);
+			
 			}
 			double* c = olda;
 			olda = newa;
