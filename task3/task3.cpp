@@ -11,22 +11,29 @@
 #define CORN3 30.0
 #define CORN4 20.0
 
-int main(int argc, char** argv) {
-	int GRID_SIZE = std::stoi(argv[2]);
-	double ACC = std::pow(10, -(std::stoi(argv[1])));
-	int ITER = std::stoi(argv[3]);
+int main(int argc, char** argv) 
+{
+
+	const int GRID_SIZE = std::stoi(argv[2]);
+	const double ACC = std::pow(10, -(std::stoi(argv[1])));
+	const int ITER = std::stoi(argv[3]);
+
+	double* newa = new double[GRID_SIZE * GRID_SIZE];
+	double* olda = new double[GRID_SIZE * GRID_SIZE];
+
+	std::memset(olda, 0, GRID_SIZE * GRID_SIZE * sizeof(double));
 
 	cublasStatus_t status;
 	cublasHandle_t handler;
 	cudaError err;
 
 	status = cublasCreate(&handler);
-	double* newa = new double[GRID_SIZE * GRID_SIZE];
-	double* olda = new double[GRID_SIZE * GRID_SIZE];
+
 	
 	int iter_count = 0;
 	double error = 1.0;
-	
+	int index = 0;
+
 	olda[0] = CORN1;
 	double prop1 = (CORN2 - CORN1) / (GRID_SIZE);
 	double prop2 = (CORN3 - CORN1) / (GRID_SIZE);
@@ -41,13 +48,15 @@ int main(int argc, char** argv) {
 	newa[(GRID_SIZE - 1) * GRID_SIZE] = CORN3;
 	newa[GRID_SIZE - 1] = CORN2;
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
-	clock_t beforeinit = clock();
+	
 
 #pragma acc enter data copyin (olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
-	
+
+	clock_t beforeinit = clock();
 	double beta = -1.0;
 	int index = 0;
+
 #pragma acc data present(olda, newa)
 #pragma acc parallel loop gang num_gangs(256) vector vector_length(256) async(1)
 		for (size_t i = 1; i < GRID_SIZE - 1; i++) {
@@ -69,8 +78,10 @@ int main(int argc, char** argv) {
 
 #pragma acc data present(olda, newa)
 #pragma acc parallel loop independent collapse(2) vector vector_length(256) gang num_gangs(256) async(2)
-			for (size_t i = 1; i < GRID_SIZE - 1; i++) {
-				for (size_t j = 1; j < GRID_SIZE - 1; j++) {
+			for (size_t i = 1; i < GRID_SIZE - 1; i++) 
+			{
+				for (size_t j = 1; j < GRID_SIZE - 1; j++) 
+				{
 					newa[i * GRID_SIZE + j] = 0.25 * 
 						(olda[(i + 1) * GRID_SIZE + j] + 
 							olda[(i - 1) * GRID_SIZE + j] + 
