@@ -103,7 +103,6 @@ int main(int argc, char** argv) {
 	}
 
 	
-
 	std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
 
 	delete[] olda;
