@@ -1,32 +1,3 @@
-Skip to content
-Search or jump to…
-Pull requests
-Issues
-Codespaces
-Marketplace
-Explore
- 
-@FedorTikunov 
-asphodel-student
-/
-nsu-parallel
-Public
-Fork your own copy of asphodel-student/nsu-parallel
-Code
-Issues
-Pull requests
-Actions
-Projects
-Security
-Insights
-nsu-parallel/task3/task3.cpp
-@asphodel-student
-asphodel-student Async added
-Latest commit 78b6407 2 hours ago
- History
- 1 contributor
-117 lines (94 sloc)  2.97 KB
-
 #include <iostream>
 #include <cstring>
 #include <cmath>
@@ -144,18 +115,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-Footer
-© 2023 GitHub, Inc.
-Footer navigation
-Terms
-Privacy
-Security
-Status
-Docs
-Contact GitHub
-Pricing
-API
-Training
-Blog
-About
-nsu-parallel/task3.cpp at main · asphodel-student/nsu-parallel
