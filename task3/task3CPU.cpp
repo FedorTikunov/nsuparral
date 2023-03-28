@@ -52,8 +52,8 @@ int main(int argc, char** argv)
 	newa[GRID_SIZE - 1] = CORN2;
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 
-	cudaMalloc((void**)&c_newa, sizeof(cuDoubleReal) * GRID_SIZE * GRID_SIZE);
-	cudaMalloc((void**)&c_olda, sizeof(cuDoubleReal) * GRID_SIZE * GRID_SIZE);
+	cudaMalloc((void**)&c_newa, sizeof(double) * GRID_SIZE * GRID_SIZE);
+	cudaMalloc((void**)&c_olda, sizeof(double) * GRID_SIZE * GRID_SIZE);
 
 #pragma acc enter data copyin (olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
@@ -96,11 +96,11 @@ int main(int argc, char** argv)
 			}
 			if (iter_count % 100 == 0)
 			{
-				cudaMemcpy(c_olda, olda, sizeof(cuDoubleReal) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
-				cudaMemcpy(c_newa, newa, sizeof(cuDoubleReal) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
+				cudaMemcpy(c_olda, olda, sizeof(double) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
+				cudaMemcpy(c_newa, newa, sizeof(double) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
 				status = cublasDaxpy(handler, GRID_SIZE * GRID_SIZE, &beta, newa, 1, c_olda, 1);
 				status = cublasIdamax(handler, GRID_SIZE * GRID_SIZE, olda, 1, &index);
-				cudaMemcpy(&error, &olda[index - 1], sizeof(cuDoubleReal), cudaMemcpyDeviceToHost)
+				cudaMemcpy(&error, &olda[index - 1], sizeof(double), cudaMemcpyDeviceToHost);
 				error = std::abs(error);
 
 				//status = cublasDcopy(handler, GRID_SIZE * GRID_SIZE, newa, 1, olda, 1);
