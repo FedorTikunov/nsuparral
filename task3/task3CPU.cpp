@@ -99,8 +99,8 @@ int main(int argc, char** argv)
 				cudaMemcpy(c_olda, olda, sizeof(double) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
 				cudaMemcpy(c_newa, newa, sizeof(double) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
 				status = cublasDaxpy(handler, GRID_SIZE * GRID_SIZE, &beta, newa, 1, c_olda, 1);
-				status = cublasIdamax(handler, GRID_SIZE * GRID_SIZE, olda, 1, &index);
-				cudaMemcpy(&error, &olda[index - 1], sizeof(double), cudaMemcpyDeviceToHost);
+				status = cublasIdamax(handler, GRID_SIZE * GRID_SIZE, c_olda, 1, &index);
+				cudaMemcpy(&error, &c_olda[index - 1], sizeof(double), cudaMemcpyDeviceToHost);
 				error = std::abs(error);
 				printf("Last iteration: %d Error: %.6lf\n", iter_count, error);
 				//status = cublasDcopy(handler, GRID_SIZE * GRID_SIZE, newa, 1, olda, 1);
