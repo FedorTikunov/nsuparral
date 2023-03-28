@@ -96,8 +96,8 @@ int main(int argc, char** argv)
 			}
 			if (iter_count % 100 == 0)
 			{
-				cudaMemcpy(c_olda, olda, , sizeof(cuDoubleReal) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
-				cudaMemcpy(c_newa, newa, , sizeof(cuDoubleReal) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
+				cudaMemcpy(c_olda, olda, sizeof(cuDoubleReal) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
+				cudaMemcpy(c_newa, newa, sizeof(cuDoubleReal) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
 				status = cublasDaxpy(handler, GRID_SIZE * GRID_SIZE, &beta, newa, 1, c_olda, 1);
 				status = cublasIdamax(handler, GRID_SIZE * GRID_SIZE, olda, 1, &index);
 				cudaMemcpy(&error, &olda[index - 1], sizeof(cuDoubleReal), cudaMemcpyDeviceToHost)
