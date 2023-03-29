@@ -60,7 +60,7 @@ int main(int argc, char** argv)
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	
 	printmatrix(olda, GRID_SIZE, GRID_SIZE);
-	printf("\n")
+	printf("\n");
 #pragma acc enter data copyin (olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
 #pragma acc wait(1)
 #pragma acc update self(olda[0:GRID_SIZE * GRID_SIZE])
 		printmatrix(olda, GRID_SIZE, GRID_SIZE);
-		printf("\n")
+		printf("\n");
 		while (iter_count < ITER && error > ACC)
 		{
 			iter_count++;
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
 		}
 #pragma acc update self(olda[0:GRID_SIZE * GRID_SIZE])
 		printmatrix(olda, GRID_SIZE, GRID_SIZE);
-		printf("\n")
+		printf("\n");
 		std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
 	}
 
