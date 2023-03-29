@@ -11,7 +11,7 @@
 #define CORN3 30.0
 #define CORN4 20.0
 
-void printmatrix(double* a, h, w) {
+void printmatrix(double* a, int h, int w) {
 	for (int i = 0; i < h; i++) {
 		for (int j = 0; j < w; j++) {
 			printf("%lf ", a[h * i + j]);
