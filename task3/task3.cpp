@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 	newa[GRID_SIZE - 1] = CORN2;
 	newa[GRID_SIZE - 1 + GRID_SIZE * (GRID_SIZE - 1)] = CORN4;
 	
-
+	printmatrix(olda, GRID_SIZE, GRID_SIZE);
 #pragma acc enter data copyin (olda[0:(GRID_SIZE * GRID_SIZE)], newa[0:(GRID_SIZE * GRID_SIZE)])
 	{
 
