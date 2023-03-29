@@ -84,7 +84,7 @@ int main(int argc, char** argv)
 
 #pragma acc wait(1)
 #pragma acc update self(arr[0:length*length])
-		printmatrix(olda, GRID_SIZE, GRID_SIZE)
+		printmatrix(olda, GRID_SIZE, GRID_SIZE);
 		while (iter_count < ITER && error > ACC)
 		{
 			iter_count++;
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
 			newa = temp;
 		}
 #pragma acc update self(arr[0:length*length])
-		printmatrix(olda, GRID_SIZE, GRID_SIZE)
+		printmatrix(olda, GRID_SIZE, GRID_SIZE);
 		std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
 	}
 
