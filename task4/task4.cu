@@ -110,11 +110,7 @@ int main(int argc, char** argv) {
     cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, GRID_SIZE * GRID_SIZE);
     cudaMalloc((void**)&temp_storage, temp_storage_bytes);
 
-    cudaEvent_t start, stop;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start);
-
+    clock_t beforecal = clock();
     double beta = -1.0;
     while (iter_count < ITER && error > ACC) {
         iter_count++;
@@ -144,14 +140,10 @@ int main(int argc, char** argv) {
         std::cout << std::endl;
     }
     */
-    cudaEventRecord(stop);
-    cudaEventSynchronize(stop);
-    float time;
-    cudaEventElapsedTime(&time, start, stop);
-    std::cout << "Calculation time: " << time << std::endl;
+
+    std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
     std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+
     cudaFree(d_olda);
     cudaFree(d_newa);
     cudaFree(temp_storage);
