@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
         newa[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * i + GRID_SIZE - 1];
     }
 
-    dim3 block_dim(16, 16);
+    dim3 block_dim(64, 64);
     dim3 grid_dim(GRID_SIZE / block_dim.x, GRID_SIZE/ block_dim.y);
 
     cudaMemcpy(d_olda, olda, sizeof(double) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
