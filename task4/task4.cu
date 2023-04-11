@@ -18,7 +18,7 @@
 
 __global__ void calculationMatrix(double* new_arry, const double* old_array)
 {
-
+    /*
     int blockIndex = blockIdx.x + gridDim.y * blockIdx.y;
     int threadIndex = threadIdx.x + threadIdx.y * blockDim.x;
 
@@ -31,6 +31,15 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array)
     if (i != 0 && i != GRID_SIZEY - 1 && j != 0 && j != GRID_SIZEX - 1) {
         new_arry[i * GRID_SIZEX + j] = 0.25 * (old_array[(i + 1) * GRID_SIZEX + j] + old_array[(i - 1) * GRID_SIZEX + j] + old_array[i * GRID_SIZEX + j - 1] + old_array[i * GRID_SIZEX + j + 1]);
         //printf("(%lf - %lf)\n", old_array[i * GRID_SIZEX + j], new_arry[i * GRID_SIZEX + j]);
+    }
+    */
+    size_t i = blockIdx.x;
+    size_t j = threadIdx.x;
+
+    if (!(blockIdx.x == 0 || threadIdx.x == 0))
+    {
+        new_arry[i * size + j] = 0.25 * (old_array[i * size + j - 1] + old_array[(i - 1) * size + j] +
+            old_array[(i + 1) * size + j] + old_array[i * size + j + 1]);
     }
 }
 
@@ -97,7 +106,7 @@ int main(int argc, char** argv) {
         newa[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * i + GRID_SIZE - 1];
     }
 
-    dim3 block_dim(64, 64);
+    dim3 block_dim(32, 32);
     dim3 grid_dim(GRID_SIZE / block_dim.x, GRID_SIZE/ block_dim.y);
 
     cudaMemcpy(d_olda, olda, sizeof(double) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice);
@@ -114,7 +123,7 @@ int main(int argc, char** argv) {
     double beta = -1.0;
     while (iter_count < ITER && error > ACC) {
         iter_count++;
-        calculationMatrix <<<grid_dim, block_dim >>> (d_newa, d_olda);
+        calculationMatrix <<<GRID_SIZE-1, GRID_SIZE-1>>> (d_newa, d_olda);
 
         if(iter_count % 100 == 0){
             getDifferenceMatrix <<<grid_dim, block_dim >>> (d_newa, d_olda, d_dif);
