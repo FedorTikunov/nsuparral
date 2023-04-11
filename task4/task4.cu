@@ -36,7 +36,7 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array)
     size_t i = blockIdx.x;
     size_t j = threadIdx.x;
 
-    if (!(blockIdx.x == 0 || threadIdx.x == 0))
+    if (if (i != 0 && i != GRID_SIZEY - 1 && j != 0 && j != GRID_SIZEX - 1))
     {
         new_arry[i * size + j] = 0.25 * (old_array[i * size + j - 1] + old_array[(i - 1) * size + j] +
             old_array[(i + 1) * size + j] + old_array[i * size + j + 1]);
