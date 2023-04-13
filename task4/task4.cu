@@ -26,21 +26,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 __global__ void calculationMatrix(double* new_arry, const double* old_array)
 {
-    /*
-    int blockIndex = blockIdx.x + gridDim.y * blockIdx.y;
-    int threadIndex = threadIdx.x + threadIdx.y * blockDim.x;
-
-
-    int arrayIndex = blockIndex * blockDim.x * blockDim.y + threadIndex;
-    int  GRID_SIZEX = gridDim.x * blockDim.x;
-    int  GRID_SIZEY = gridDim.y * blockDim.y;
-    int i = arrayIndex / GRID_SIZEX;
-    int j = arrayIndex % GRID_SIZEX;
-    if (i != 0 && i != GRID_SIZEY - 1 && j != 0 && j != GRID_SIZEX - 1) {
-        new_arry[i * GRID_SIZEX + j] = 0.25 * (old_array[(i + 1) * GRID_SIZEX + j] + old_array[(i - 1) * GRID_SIZEX + j] + old_array[i * GRID_SIZEX + j - 1] + old_array[i * GRID_SIZEX + j + 1]);
-        //printf("(%lf - %lf)\n", old_array[i * GRID_SIZEX + j], new_arry[i * GRID_SIZEX + j]);
-    }
-    */
     size_t i = blockIdx.x;
     size_t j = threadIdx.x;
     size_t size = blockDim.x + 1;
