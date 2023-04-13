@@ -44,7 +44,8 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array)
     size_t i = blockIdx.x;
     size_t j = threadIdx.x;
     size_t size = blockDim.x;
-    if (i != 0 && i != blockDim.y - 1 && j != 0 && j != size - 1)
+    printf("%d", size);
+    if (i != 0 && i != size - 1 && j != 0 && j != size - 1)
     {
         new_arry[i * size + j] = 0.25 * (old_array[i * size + j - 1] + old_array[(i - 1) * size + j] +
             old_array[(i + 1) * size + j] + old_array[i * size + j + 1]);
