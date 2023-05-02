@@ -36,13 +36,12 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array, siz
     }
 }  
 */
-__global__ void calculationMatrix(double* new_arry, const double* old_array)
+__global__ void calculationMatrix(double* new_arry, const double* old_array, size_t size)
 {
     size_t i = blockIdx.x;
     size_t j = threadIdx.x;
-    size_t size = blockDim.x + 1;
     //printf("%d", size);
-    if (i != 0 && i != size - 1 && j != 0 && j != size - 1)
+    if (i > 0 && i < size - 1 && j > 0 && j < size - 1)
     {
         new_arry[i * size + j] = 0.25 * (old_array[i * size + j - 1] + old_array[(i - 1) * size + j] +
             old_array[(i + 1) * size + j] + old_array[i * size + j + 1]);
@@ -56,25 +55,8 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 __global__ void getDifferenceMatrix(const double* new_arry, const double* old_array, double* dif)
 {   
-    
-    int blockIndex = blockIdx.x + gridDim.y * blockIdx.y;
-    int threadIndex = threadIdx.x + threadIdx.y * blockDim.x;
-
-
-    int arrayIndex = blockIndex * blockDim.x * blockDim.y + threadIndex;
-    int GRID_SIZEX = gridDim.x * blockDim.x;
-    int GRID_SIZEY = gridDim.y * blockDim.y;
-    int i = arrayIndex / GRID_SIZEX;
-    int j = arrayIndex % GRID_SIZEX;
-    
-    
-    if (i != 0 && i != GRID_SIZEY - 1 && j != 0 && j != GRID_SIZEX - 1) {
-        //printf("%lf = abs(%lf - %lf)\n", dif[i * GRID_SIZEX + j], old_array[i * GRID_SIZEX + j], new_arry[i * GRID_SIZEX + j]);
-        dif[i * GRID_SIZEX + j] = std::abs(old_array[i * GRID_SIZEX + j] - new_arry[i * GRID_SIZEX + j]);
-    }
-    
-    //size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    // dif[idx] = std::abs(old_array[idx] - new_arry[idx]);
+    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    dif[idx] = std::abs(old_array[idx] - new_arry[idx]);
 }
 
 //основной код
@@ -191,14 +173,20 @@ int main(int argc, char** argv) {
     cudaGraphCreate(&graph, 0);
     
     cudaStream_t stream; //memoryStream;
-	cudaStreamCreate(&stream);
+    cudaStreamCreate(&stream);
 	//cudaStreamCreate(&memoryStream);
     
     // размерность блоков и грида 
-    dim3 block_dim(32, 32);
-    dim3 grid_dim(GRID_SIZE / block_dim.x, GRID_SIZE/ block_dim.y);
-    
-    //size_t offset = (rank != 0) ? GRID_SIZE : 0;
+    int block_dim;
+    int min_size;
+    cudaOccupancyMaxPotentialBlockSize(&min_size, &block_dim, calculationMatrix, 0, GRID_SIZE * GRID_SIZE);
+    int block_dim1;
+    int min_size1;
+    cudaOccupancyMaxPotentialBlockSize(&min_size1, &block_dim1, getDifferenceMatrix, 0, GRID_SIZE * GRID_SIZE);
+    int grid_dim = (GRID_SIZE * GRID_SIZE  + block_dim - 1) / block_dim;
+    int grid_dim1 = (GRID_SIZE * GRID_SIZE  + block_dim1 - 1) / block_dim1;
+    std::cout << grid_dim << " " << block_dim << " " << min_size << std::endl;
+	    //size_t offset = (rank != 0) ? GRID_SIZE : 0;
 
     //cudaMemset(d_olda, 0, sizeof(double) * GRID_SIZE * GRID_SIZE);
 	//cudaMemset(d_newa, 0, sizeof(double) * GRID_SIZE * GRID_SIZE);
@@ -206,7 +194,7 @@ int main(int argc, char** argv) {
     // cudaMemset(d_olda, 0, sizeof(double) * sizeOfAllocatedMemory);
 	// cudaMemset(d_newa, 0, sizeof(double) * sizeOfAllocatedMemory);
 
-    // копирование информации с CPU на GPU
+    // CPU на GPU
     //cudaMemcpy(d_olda, olda + (startYIdx * GRID_SIZE) - offset, sizeof(double) * sizeOfAllocatedMemory, cudaMemcpyHostToDevice); // (CPU) olda -> (GPU) d_olda
     //cudaMemcpy(d_newa, newa + (startYIdx * GRID_SIZE) - offset, sizeof(double) * sizeOfAllocatedMemory, cudaMemcpyHostToDevice); // (CPU) newa -> (GPU) d_newa
 
@@ -219,6 +207,7 @@ int main(int argc, char** argv) {
 
     std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
     cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+
     //cudaGraphNode_t nodes[101];
     for (int i = 0; i < 100; i++) {
         /*
@@ -233,7 +222,7 @@ int main(int argc, char** argv) {
         params.extra = NULL;
         cudaGraphAddKernelNode(&nodes[i], graph, NULL, 0, &params);
         */
-        calculationMatrix <<<GRID_SIZE-1, GRID_SIZE-1, 0, stream>>> (d_newa, d_olda); /// GRID_SIZE , sizeOfAreaForOneProcess);
+        calculationMatrix <<<grid_dim, block_dim, 0, stream>>> (d_newa, d_olda, GRID_SIZE); /// GRID_SIZE , sizeOfAreaForOneProcess);
         /*
         // Обмен верхней границей
         if (rank != 0)
@@ -275,7 +264,7 @@ int main(int argc, char** argv) {
     cudaGraphAddDependencies(graph, &nodes[99], &nodes[100], 1);
     */
     //getDifferenceMatrix <<<blocks_x * blocks_y, threads_x, 0, stream>>> (d_newa, d_olda, d_dif);
-    getDifferenceMatrix <<<grid_dim, block_dim, 0, stream>>> (d_newa, d_olda, d_dif);
+    getDifferenceMatrix <<<grid_dim1, block_dim1, 0, stream>>> (d_newa, d_olda, d_dif);
     cudaStreamEndCapture(stream, &graph);
 
     cudaGraphExec_t instance;
