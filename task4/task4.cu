@@ -5,11 +5,10 @@
 #include <cmath>
 #include <ctime>
 #include <string>
-#include <cublas_v2.h>
 #include <cuda_runtime.h>
 #include <cub/cub.cuh>
-
-
+#include <cublas_v2.h>
+//#include "mpi.h"
 
 //значения в углах сетки
 #define CORN1 10.0
@@ -24,6 +23,19 @@
 //обновляет ячейки первого массива на основе среднего значения четерех ближайших по индексу ячейк из второго массива
 //функция являеться global и распоточивает подсчет матрицы на потоки
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/*
+__global__ void calculationMatrix(double* new_arry, const double* old_array, size_t size, size_t sizePerGpu)
+{
+	unsigned int j = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int i = blockIdx.y * blockDim.y + threadIdx.y;
+    //printf("%d", size);
+    if (i != 0 && i != sizePerGpu - 1 && j != 0 && j != size - 1)
+    {
+        new_arry[i * size + j] = 0.25 * (old_array[i * size + j - 1] + old_array[(i - 1) * size + j] +
+            old_array[(i + 1) * size + j] + old_array[i * size + j + 1]);
+    }
+}  
+*/
 __global__ void calculationMatrix(double* new_arry, const double* old_array)
 {
     size_t i = blockIdx.x;
@@ -44,19 +56,25 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array)
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 __global__ void getDifferenceMatrix(const double* new_arry, const double* old_array, double* dif)
 {   
+    
     int blockIndex = blockIdx.x + gridDim.y * blockIdx.y;
     int threadIndex = threadIdx.x + threadIdx.y * blockDim.x;
 
 
     int arrayIndex = blockIndex * blockDim.x * blockDim.y + threadIndex;
-    int  GRID_SIZEX = gridDim.x * blockDim.x;
-    int  GRID_SIZEY = gridDim.y * blockDim.y;
+    int GRID_SIZEX = gridDim.x * blockDim.x;
+    int GRID_SIZEY = gridDim.y * blockDim.y;
     int i = arrayIndex / GRID_SIZEX;
     int j = arrayIndex % GRID_SIZEX;
+    
+    
     if (i != 0 && i != GRID_SIZEY - 1 && j != 0 && j != GRID_SIZEX - 1) {
         //printf("%lf = abs(%lf - %lf)\n", dif[i * GRID_SIZEX + j], old_array[i * GRID_SIZEX + j], new_arry[i * GRID_SIZEX + j]);
         dif[i * GRID_SIZEX + j] = std::abs(old_array[i * GRID_SIZEX + j] - new_arry[i * GRID_SIZEX + j]);
     }
+    
+    //size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+    // dif[idx] = std::abs(old_array[idx] - new_arry[idx]);
 }
 
 //основной код
@@ -74,12 +92,44 @@ int main(int argc, char** argv) {
     double ACC = std::pow(10, -(std::stoi(argv[1]))); // до какой точность обновлять сетку
     int ITER = std::stoi(argv[3]); //  максимальное количество итераций
 
+    /*
+    int rank, sizeOfTheGroup;
+    MPI_Init(&argc, &argv);
+
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &sizeOfTheGroup);
+
+    
+    cudaSetDevice(rank);
+
+    if (rank!=0)
+        cudaDeviceEnablePeerAccess(rank - 1, 0);
+    if (rank!=sizeOfTheGroup-1)
+        cudaDeviceEnablePeerAccess(rank + 1, 0);
+
+    size_t sizeOfAreaForOneProcess = GRID_SIZE / sizeOfTheGroup;
+	size_t startYIdx = sizeOfAreaForOneProcess * rank;
+
+    if (rank!=0)
+        cudaDeviceEnablePeerAccess(rank - 1, 0);
+    if (rank!=sizeOfTheGroup-1)
+        cudaDeviceEnablePeerAccess(rank + 1, 0);
+
+    */
+
+	
+
+
     //выделяем память под 2 сетки размера GRID_SIZExGRID_SIZE
+    //double* newa, *olda;
+    //cudaMallocHost(&newa,  sizeof(double) * GRID_SIZE * GRID_SIZE); 
+    //cudaMallocHost(&olda,  sizeof(double) * GRID_SIZE * GRID_SIZE);
+
     double* newa = new double[GRID_SIZE * GRID_SIZE]; 
     double* olda = new double[GRID_SIZE * GRID_SIZE];
 
-
     std::memset(olda, 0, GRID_SIZE * GRID_SIZE * sizeof(double));
+
 
     int iter_count = 0; // счетчик итераций
     double error = 1.0; // переменная ошибки
@@ -117,13 +167,50 @@ int main(int argc, char** argv) {
         newa[(GRID_SIZE - 1) * GRID_SIZE + i] = olda[(GRID_SIZE - 1) * GRID_SIZE + i];
         newa[GRID_SIZE * i + GRID_SIZE - 1] = olda[GRID_SIZE * i + GRID_SIZE - 1];
     }
+    /*
+    if (rank != 0 && rank != sizeOfTheGroup - 1)
+	{
+		sizeOfAreaForOneProcess += 2;
+	}
+	else 
+	{
+		sizeOfAreaForOneProcess += 1;
+	}
+        
+    size_t sizeOfAllocatedMemory = GRID_SIZE * sizeOfAreaForOneProcess;
+        
+    
+    unsigned int threads_x = (GRID_SIZE < 1024) ? GRID_SIZE : 1024;
+    unsigned int blocks_y = sizeOfAreaForOneProcess;
+    unsigned int blocks_x = GRID_SIZE / threads_x;
+
+    dim3 blockDim1(threads_x, 1);
+    dim3 gridDim1(blocks_x, blocks_y);
+*/
+    cudaGraph_t graph;    
+    cudaGraphCreate(&graph, 0);
+    
+    cudaStream_t stream; //memoryStream;
+	cudaStreamCreate(&stream);
+	//cudaStreamCreate(&memoryStream);
     
     // размерность блоков и грида 
     dim3 block_dim(32, 32);
     dim3 grid_dim(GRID_SIZE / block_dim.x, GRID_SIZE/ block_dim.y);
+    
+    //size_t offset = (rank != 0) ? GRID_SIZE : 0;
+
+    //cudaMemset(d_olda, 0, sizeof(double) * GRID_SIZE * GRID_SIZE);
+	//cudaMemset(d_newa, 0, sizeof(double) * GRID_SIZE * GRID_SIZE);
+    
+    // cudaMemset(d_olda, 0, sizeof(double) * sizeOfAllocatedMemory);
+	// cudaMemset(d_newa, 0, sizeof(double) * sizeOfAllocatedMemory);
 
     // копирование информации с CPU на GPU
-    cudaMemcpy(d_olda, olda, sizeof(double) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice); // (CPU) olda -> (GPU) d_olda
+    //cudaMemcpy(d_olda, olda + (startYIdx * GRID_SIZE) - offset, sizeof(double) * sizeOfAllocatedMemory, cudaMemcpyHostToDevice); // (CPU) olda -> (GPU) d_olda
+    //cudaMemcpy(d_newa, newa + (startYIdx * GRID_SIZE) - offset, sizeof(double) * sizeOfAllocatedMemory, cudaMemcpyHostToDevice); // (CPU) newa -> (GPU) d_newa
+
+    cudaMemcpy(d_olda, olda, sizeof(double) * GRID_SIZE *  GRID_SIZE, cudaMemcpyHostToDevice); // (CPU) olda -> (GPU) d_olda
     cudaMemcpy(d_newa, newa, sizeof(double) * GRID_SIZE * GRID_SIZE, cudaMemcpyHostToDevice); // (CPU) newa -> (GPU) d_newa
 
     //выделяем память на gpu для переменной, которая будет хранить ошибку на device
@@ -131,12 +218,75 @@ int main(int argc, char** argv) {
     cudaMalloc((void**)&max_error, sizeof(double));
 
     std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
+    cudaStreamBeginCapture(stream, cudaStreamCaptureModeGlobal);
+    //cudaGraphNode_t nodes[101];
+    for (int i = 0; i < 100; i++) {
+        /*
+        cudaKernelNodeParams params = {0};
+        memset(&params, 0, sizeof(cudaKernelNodeParams));
+        void* paramsargs[2]= {(void**)&d_newa, (void**)&d_olda};
+        params.func = (void*)&calculationMatrix;
+        params.gridDim = dim3(GRID_SIZE, GRID_SIZE-1, 1);
+        params.blockDim = dim3(1, 1, 1);
+        params.sharedMemBytes = 0;
+        params.kernelParams = paramsargs;
+        params.extra = NULL;
+        cudaGraphAddKernelNode(&nodes[i], graph, NULL, 0, &params);
+        */
+        calculationMatrix <<<GRID_SIZE-1, GRID_SIZE-1, 0, stream>>> (d_newa, d_olda); /// GRID_SIZE , sizeOfAreaForOneProcess);
+        /*
+        // Обмен верхней границей
+        if (rank != 0)
+		{
+            MPI_Sendrecv(d_newa + GRID_SIZE + 1, GRID_SIZE - 2, MPI_DOUBLE, rank - 1, 0, 
+                d_newa + 1, GRID_SIZE - 2, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		}
+		// Обмен нижней границей
+		if (rank != sizeOfTheGroup - 1)
+		{
+            MPI_Sendrecv(d_newa + (sizeOfAreaForOneProcess - 2) * GRID_SIZE + 1, 
+				GRID_SIZE - 2, MPI_DOUBLE, rank + 1, 0,
+                d_newa + (sizeOfAreaForOneProcess - 1) * GRID_SIZE + 1, 
+				GRID_SIZE - 2, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		}
+        */
+        if(i < 99){
+            double* c = d_olda; 
+            d_olda = d_newa;
+            d_newa = c;
+        }
+        /*
+        if (i > 0) {
+            cudaGraphAddDependencies(graph, &nodes[i-1], &nodes[i], 1);
+        }
+        */
+    }
+    /*
+    cudaKernelNodeParams params = {0};
+    memset(&params, 0, sizeof(cudaKernelNodeParams));
+    void* paramsargs[3]= {(void**)&d_newa, (void**)&d_olda, (void**)&d_dif};
+    params.func = (void*)&getDifferenceMatrix;
+    params.gridDim = grid_dim;
+    params.blockDim = block_dim;
+    params.sharedMemBytes = 0;
+    params.kernelParams = paramsargs;
+    params.extra = NULL;
+    cudaGraphAddKernelNode(&nodes[100], graph, NULL, 0, &params);
+    cudaGraphAddDependencies(graph, &nodes[99], &nodes[100], 1);
+    */
+    //getDifferenceMatrix <<<blocks_x * blocks_y, threads_x, 0, stream>>> (d_newa, d_olda, d_dif);
+    getDifferenceMatrix <<<grid_dim, block_dim, 0, stream>>> (d_newa, d_olda, d_dif);
+    cudaStreamEndCapture(stream, &graph);
+
+    cudaGraphExec_t instance;
+    cudaGraphInstantiate(&instance, graph, NULL, NULL, 0);
+
 
     size_t temp_storage_bytes = 0;
     double* temp_storage = NULL;
     //получаем размер временного буфера для редукции
+    //cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, GRID_SIZE * sizeOfAreaForOneProcess);
     cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, GRID_SIZE * GRID_SIZE);
-
     //выделяем память для буфера
     cudaMalloc((void**)&temp_storage, temp_storage_bytes);
 
@@ -144,34 +294,38 @@ int main(int argc, char** argv) {
     
     //алгоритм обновления сетки, работающий пока макс. ошибка не станет меньше или равне нужной точности, или пока количество итерации не превысит максимальное количество.
     while (iter_count < ITER && error > ACC) {
-        iter_count++;
-        calculationMatrix <<<GRID_SIZE-1, GRID_SIZE-1>>> (d_newa, d_olda); // расчет матрицы
-
-        // рфсчитываем ошибку каждую сотую итерацию
+        iter_count+= 100;
+        //calculationMatrix <<<GRID_SIZE-1, GRID_SIZE-1>>> (d_newa, d_olda); // расчет матрицы
+        cudaGraphLaunch(instance, stream);
+        cudaStreamSynchronize(stream);
+        // расчитываем ошибку каждую сотую итерацию
         if(iter_count % 100 == 0){
-            getDifferenceMatrix <<<grid_dim, block_dim >>> (d_newa, d_olda, d_dif); // вычисления разницы матрицы
+            //getDifferenceMatrix <<<grid_dim, block_dim >>> (d_newa, d_olda, d_dif); // вычисления разницы матрицы
+            //cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, sizeOfAllocatedMemory); // нахождение максимума в разнице матрицы
             cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, GRID_SIZE * GRID_SIZE); // нахождение максимума в разнице матрицы
             cudaMemcpy(&error, max_error, sizeof(double), cudaMemcpyDeviceToHost); // запись ошибки в переменную на host
-            error = std::abs(error);
+			
+            // Находим максимальную ошибку среди всех и передаём её всем процессам
+			//MPI_Allreduce((void*)&error,(void*)&error, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
         }
 
-        //смена указателей между сетками на device
-        double* c = d_olda;
-        d_olda = d_newa;
-        d_newa = c;
     }
     
-    //вывод времени работы на алгоритма
-    std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
-    //вывод кол. итерацций и значение ошибки
-    std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
-
+    //if (rank == 0)
+	//{
+        //вывод времени работы на алгоритма
+        std::cout << "Calculation time: " << 1.0 * (clock() - beforecal) / CLOCKS_PER_SEC << std::endl;
+        //вывод кол. итерацций и значение ошибки
+        std::cout << "Iteration: " << iter_count << " " << "Error: " << error << std::endl;
+    //}
     //очитска памяти
     cudaFree(d_olda);
     cudaFree(d_newa);
     cudaFree(temp_storage);
-    delete[] olda;
-    delete[] newa;
+    cudaFree(olda);
+    cudaFree(newa);
+
+    //MPI_Finalize();
 return 0;
 }
 
