@@ -1,4 +1,4 @@
-﻿
+
 #include "device_launch_parameters.h"
 #include <stdio.h>
 #include <iostream>
@@ -8,7 +8,9 @@
 #include <cuda_runtime.h>
 #include <cub/cub.cuh>
 #include <iomanip>
+
 #include "mpi.h"
+#include "nccl.h"
 
 //значения в углах сетки
 #define CORN1 10.0
@@ -75,6 +77,16 @@ int main(int argc, char** argv) {
         cudaDeviceEnablePeerAccess(rank - 1, 0);
     if (rank!=sizeOfTheGroup-1)
         cudaDeviceEnablePeerAccess(rank + 1, 0);
+
+    ncclComm_t ncclcomm;
+    ncclUniqueId idx;
+    
+    if (rank == 0) 
+	{
+		ncclGetUniqueId(&idx);
+	}
+    MPI_Bcast(&idx, sizeof(id), MPI_BYTE, 0, MPI_COMM_WORLD);
+    ncclCommInitRank(&ncclcomm, sizeOfTheGroup, idx, rank);
 
     size_t sizeOfAreaForOneProcess = GRID_SIZE / sizeOfTheGroup;
 	size_t startYIdx = sizeOfAreaForOneProcess * rank;
@@ -189,7 +201,7 @@ int main(int argc, char** argv) {
 
             cudaStreamSynchronize(stream);
             
-            MPI_Allreduce((void*)max_error,(void*)max_error, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
+            ncclAllReduce((void*)max_error,(void*)max_error, 1, ncclDouble, ncclMax, ncclcomm, stream);
             
             cudaMemcpyAsync(error, max_error, sizeof(double), cudaMemcpyDeviceToHost, stream); // запись ошибки в переменную на host
             // Находим максимальную ошибку среди всех и передаём её всем процессам
@@ -197,19 +209,22 @@ int main(int argc, char** argv) {
         }     
         cudaStreamSynchronize(stream);
 
+        ncclGroupStart();
         if (rank != 0)
 		{
-            MPI_Sendrecv(d_newa + GRID_SIZE + 1, GRID_SIZE - 2, MPI_DOUBLE, rank - 1, 0, 
-                d_newa + 1, GRID_SIZE - 2, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            ncclSend(d_newa + size + 1, size - 2, ncclDouble, rank - 1, comm, stream); 
+            ncclRecv(d_newa + 1, size - 2, ncclDouble, rank - 1, comm, stream);
+
 		}
-		// Обмен нижней границей
+        // Обмен нижней границей
 		if (rank != sizeOfTheGroup - 1)
 		{
-            MPI_Sendrecv(d_newa + (sizeOfAreaForOneProcess - 2) * GRID_SIZE + 1, 
-				GRID_SIZE - 2, MPI_DOUBLE, rank + 1, 0,
-                d_newa + (sizeOfAreaForOneProcess - 1) * GRID_SIZE + 1, 
-				GRID_SIZE - 2, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		}            
+            ncclSend(d_newa + (sizeOfAreaForOneProcess - 2) * size + 1, 
+				size - 2, ncclDouble, rank + 1, comm, stream);
+            ncclRecv(d_newa + (sizeOfAreaForOneProcess - 1) * size + 1, 
+				size - 2, ncclDouble, rank + 1, comm, stream);
+		}
+        ncclGroupEnd();           
         double* c = d_olda; 
         d_olda = d_newa;
         d_newa = c;
