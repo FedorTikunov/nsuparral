@@ -34,6 +34,26 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array, siz
             old_array[(i + 1) * size + j] + old_array[i * size + j + 1]);
     }
 }
+
+
+
+
+__global__ void calculateBoundaries(double* new_arry, double* old_array, size_t size, size_t groupSize)
+{
+	unsigned int iUp = blockIdx.x * blockDim.x + threadIdx.x;
+	unsigned int iDown = blockIdx.x * blockDim.x + threadIdx.x + (size * (groupSize - 1));
+	
+	if(iUp < size * groupSize && iDown < size * groupSize)
+	{
+        new_arry[0 * size + iUp] = 0.25 * (old_array[0 * size + iUp - 1]  +
+            old_array[(0 + 1) * size + iUp] + old_array[0 * size + iUp + 1]);
+        new_arry[0 * size + iDown] = 0.25 * (old_array[0 * size + iDown - 1] +
+            old_array[(0 + 1) * size + iDown] + old_array[0 * size + iDown + 1]);
+	}
+}
+
+
+
 //функция по вычислению разницы матриц
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //функция получает указатели трех массив. 
@@ -178,8 +198,9 @@ int main(int argc, char** argv) {
     //алгоритм обновления сетки, работающий пока макс. ошибка не станет меньше или равне нужной точности, или пока количество итерации не превысит максимальное количество.
     while (iter_count < ITER && (*error) > ACC) {
         iter_count += 1;
+        //calculateBoundaries<<<GRID_SIZE, 1, 0, stream>>>(d_newa, d_olda, GRID_SIZE, sizeOfAreaForOneProcess);
         //calculationMatrix <<<GRID_SIZE-1, GRID_SIZE-1>>> (d_newa, d_olda); // расчет матрицы
-        calculationMatrix <<<gridDim1, blockDim1, 0, stream>>> (d_newa, d_olda, GRID_SIZE, sizeOfAreaForOneProcess); /// GRID_SIZE , sizeOfAreaForOneProcess);
+        calculationMatrix <<<gridDim1, blockDim1, 0, memoryStream>>> (d_newa, d_olda, GRID_SIZE, sizeOfAreaForOneProcess); /// GRID_SIZE , sizeOfAreaForOneProcess);
         // Обмен верхней границей
 
         // расчитываем ошибку каждую сотую итерацию
@@ -195,8 +216,8 @@ int main(int argc, char** argv) {
             // Находим максимальную ошибку среди всех и передаём её всем процессам
 			
         }     
-        cudaStreamSynchronize(stream);
 
+        //MPI_Request sendRecvBounderies[2];
         if (rank != 0)
 		{
             MPI_Sendrecv(d_newa + GRID_SIZE + 1, GRID_SIZE - 2, MPI_DOUBLE, rank - 1, 0, 
@@ -209,7 +230,9 @@ int main(int argc, char** argv) {
 				GRID_SIZE - 2, MPI_DOUBLE, rank + 1, 0,
                 d_newa + (sizeOfAreaForOneProcess - 1) * GRID_SIZE + 1, 
 				GRID_SIZE - 2, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		}            
+		}     
+        //MPI_Waitall(2, sendRecvBounderies, MPI_STATUSES_IGNORE);  
+        cudaStreamSynchronize(memoryStream);  
         double* c = d_olda; 
         d_olda = d_newa;
         d_newa = c;
