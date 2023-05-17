@@ -1,4 +1,4 @@
-﻿
+
 #include "device_launch_parameters.h"
 #include <stdio.h>
 #include <iostream>
@@ -28,7 +28,7 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array, siz
 	unsigned int j = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int i = blockIdx.y * blockDim.y + threadIdx.y;
     //printf("%d", size);
-    if (i > 0 && i < groupSize - 1 && j > 0 && j < size - 1)
+    if (!(j < 1 || i < 2 || j > size - 2 || i > groupSize - 2))
     {
         new_arry[i * size + j] = 0.25 * (old_array[i * size + j - 1] + old_array[(i - 1) * size + j] +
             old_array[(i + 1) * size + j] + old_array[i * size + j + 1]);
@@ -38,17 +38,18 @@ __global__ void calculationMatrix(double* new_arry, const double* old_array, siz
 
 
 
-__global__ void calculateBoundaries(double* new_arry, double* old_array, size_t size, size_t groupSize)
+__global__ void calculationBoundaries(double* new_arry, double* old_array, size_t size, size_t groupSize)
 {
 	unsigned int iUp = blockIdx.x * blockDim.x + threadIdx.x;
-	unsigned int iDown = blockIdx.x * blockDim.x + threadIdx.x + (size * (groupSize - 1));
-	
-	if(iUp < size * groupSize && iDown < size * groupSize)
+	unsigned int iDown = blockIdx.x * blockDim.x + threadIdx.x;
+	if (iUp == 0 || iUp > size - 2) return;
+
+	if(iUp < size)
 	{
-        new_arry[0 * size + iUp] = 0.25 * (old_array[0 * size + iUp - 1]  +
-            old_array[(0 + 1) * size + iUp] + old_array[0 * size + iUp + 1]);
-        new_arry[0 * size + iDown] = 0.25 * (old_array[0 * size + iDown - 1] +
-            old_array[(0 + 1) * size + iDown] + old_array[0 * size + iDown + 1]);
+        new_arry[1 * size + iUp] = 0.25 * (old_array[1 * size + iUp - 1]  + old_array[(1 - 1) * size + iUp] +
+            old_array[(1 + 1) * size + iUp] + old_array[1 * size + iUp + 1]);
+        new_arry[(groupSize - 2) * size + iDown] = 0.25 * (old_array[(groupSize - 2) * size + iDown - 1] +  old_array[((groupSize - 2) - 1) * size + iDown] +
+            old_array[((groupSize - 2) + 1) * size + iDown] + old_array[(groupSize - 2) * size + iDown + 1]);
 	}
 }
 
@@ -60,10 +61,15 @@ __global__ void calculateBoundaries(double* new_arry, double* old_array, size_t 
 //модуль разницы двух первых массивов записывает в третий
 //при распоточивание, 1d массивы разбеваются на блоки по 32x32 как 2d массивы
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-__global__ void getDifferenceMatrix(const double* new_arry, const double* old_array, double* dif)
+__global__ void getDifferenceMatrix(const double* new_arry, const double* old_array, double* dif, size_t size,  size_t groupSize)
 {   
-    size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-    dif[idx] = std::abs(old_array[idx] - new_arry[idx]);
+
+    unsigned int j = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int i = blockIdx.y * blockDim.y + threadIdx.y;
+   	size_t idx = i * size + j;
+	if(!(j == 0 || i == 0 || j == size - 1 || i == groupSize - 1)){
+        dif[idx] = std::abs(old_array[idx] - new_arry[idx]);
+    }
 }
 
 //основной код
@@ -158,7 +164,7 @@ int main(int argc, char** argv) {
     cudaMalloc((void**)&d_newa, sizeof(double) * sizeOfAllocatedMemory);
     cudaMalloc((void**)&d_dif, sizeof(double) * sizeOfAllocatedMemory);
 
-    unsigned int threads_x = (GRID_SIZE < 1024) ? GRID_SIZE : 1024;
+    unsigned int threads_x = std::min(GRID_SIZE, 1024);
     unsigned int blocks_y = sizeOfAreaForOneProcess;
     unsigned int blocks_x = GRID_SIZE / threads_x;
 
@@ -166,9 +172,6 @@ int main(int argc, char** argv) {
     dim3 gridDim1(blocks_x, blocks_y);
 
 	size_t offset = (rank != 0) ? GRID_SIZE : 0;
-
-    cudaMemset(d_olda, 0, sizeof(double) * sizeOfAllocatedMemory);
-	cudaMemset(d_newa, 0, sizeof(double) * sizeOfAllocatedMemory);
 
     // CPU на GPU
     cudaMemcpy(d_olda, olda + (startYIdx * GRID_SIZE) - offset, sizeof(double) * sizeOfAllocatedMemory, cudaMemcpyHostToDevice); // (CPU) olda -> (GPU) d_olda
@@ -182,31 +185,39 @@ int main(int argc, char** argv) {
 	{
         std::cout << "Initialization time: " << 1.0 * (clock() - beforeinit) / CLOCKS_PER_SEC << std::endl;
     }
+
+    
+    cudaStream_t stream, matrixStream;
+    cudaStreamCreate(&stream);
+	cudaStreamCreate(& matrixStream);
+
     size_t temp_storage_bytes = 0;
     double* temp_storage = NULL;
+
+
     //получаем размер временного буфера для редукции
-    cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, sizeOfAllocatedMemory);
+    cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, sizeOfAllocatedMemory, stream);
     //выделяем память для буфера
     cudaMalloc((void**)&temp_storage, temp_storage_bytes);
-
-    cudaStream_t stream, memoryStream;
-    cudaStreamCreate(&stream);
-	cudaStreamCreate(&memoryStream);
 
     clock_t beforecal = clock();
     
     //алгоритм обновления сетки, работающий пока макс. ошибка не станет меньше или равне нужной точности, или пока количество итерации не превысит максимальное количество.
     while (iter_count < ITER && (*error) > ACC) {
         iter_count += 1;
-        //calculateBoundaries<<<GRID_SIZE, 1, 0, stream>>>(d_newa, d_olda, GRID_SIZE, sizeOfAreaForOneProcess);
+        calculationBoundaries<<<GRID_SIZE, 1, 0, stream>>>(d_newa, d_olda, GRID_SIZE, sizeOfAreaForOneProcess);
         //calculationMatrix <<<GRID_SIZE-1, GRID_SIZE-1>>> (d_newa, d_olda); // расчет матрицы
-        calculationMatrix <<<gridDim1, blockDim1, 0, memoryStream>>> (d_newa, d_olda, GRID_SIZE, sizeOfAreaForOneProcess); /// GRID_SIZE , sizeOfAreaForOneProcess);
-        // Обмен верхней границей
+
+        cudaStreamSynchronize(stream);
+
+        calculationMatrix <<<gridDim1, blockDim1, 0, matrixStream>>> (d_newa, d_olda, GRID_SIZE, sizeOfAreaForOneProcess); /// GRID_SIZE , sizeOfAreaForOneProcess);
+
 
         // расчитываем ошибку каждую сотую итерацию
         if(iter_count % 100 == 0){  
-            getDifferenceMatrix <<<blocks_x * blocks_y, threads_x, 0, stream>>> (d_newa, d_olda, d_dif);
-            cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, sizeOfAllocatedMemory); // нахождение максимума в разнице матрицы
+            //cudaStreamSynchronize(memoryStream);
+            getDifferenceMatrix <<<gridDim1, blockDim1, 0, stream>>> (d_newa, d_olda, d_dif, GRID_SIZE, sizeOfAreaForOneProcess);
+            cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, d_dif, max_error, sizeOfAllocatedMemory, stream); // нахождение максимума в разнице матрицы
 
             cudaStreamSynchronize(stream);
             
@@ -215,8 +226,8 @@ int main(int argc, char** argv) {
             cudaMemcpyAsync(error, max_error, sizeof(double), cudaMemcpyDeviceToHost, stream); // запись ошибки в переменную на host
             // Находим максимальную ошибку среди всех и передаём её всем процессам
 			
-        }     
-
+        }
+        //cudaStreamSynchronize(stream); 
         //MPI_Request sendRecvBounderies[2];
         if (rank != 0)
 		{
@@ -232,7 +243,7 @@ int main(int argc, char** argv) {
 				GRID_SIZE - 2, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		}     
         //MPI_Waitall(2, sendRecvBounderies, MPI_STATUSES_IGNORE);  
-        cudaStreamSynchronize(memoryStream);  
+        cudaStreamSynchronize(matrixStream);
         double* c = d_olda; 
         d_olda = d_newa;
         d_newa = c;
